@@ -1,10 +1,18 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 
-// cookies() kullanan server client bu sayfayı zaten dinamik yapar,
-// ancak niyeti açık tutmak için de belirtiyoruz.
-export const dynamic = "force-dynamic";
+export default function HealthPage() {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 font-sans">
+      <h1 className="text-2xl font-semibold">PV Solutions CRM — Sistem Sağlık Kontrolü</h1>
+      <Suspense fallback={<p className="text-lg">Kontrol ediliyor...</p>}>
+        <ConnectionStatus />
+      </Suspense>
+    </main>
+  );
+}
 
-export default async function HealthPage() {
+async function ConnectionStatus() {
   const envUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const envKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -32,8 +40,7 @@ export default async function HealthPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 font-sans">
-      <h1 className="text-2xl font-semibold">PV Solutions CRM — Sistem Sağlık Kontrolü</h1>
+    <>
       <p className="text-lg">{statusLabel[connectionStatus]}</p>
       {errorMessage && (
         <p className="max-w-xl text-center text-sm text-red-600">{errorMessage}</p>
@@ -46,6 +53,6 @@ export default async function HealthPage() {
         <dt className="font-medium">Node.js</dt>
         <dd>{process.version}</dd>
       </dl>
-    </main>
+    </>
   );
 }

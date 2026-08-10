@@ -1,24 +1,38 @@
 @import "tailwindcss";
 
+/*
+ * PV Solutions marka renkleri. Ekran görüntüsündeki tasarımdan alınmıştır;
+ * bilinçli olarak sabit (light-only) tutuluyor — otomatik koyu tema, bu
+ * paletteki kartlar/gölgeler için ayrıca tasarlanmadan eklenirse bozuk
+ * görünür.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  --brand: #f97316;
+  --brand-dark: #ea580c;
+  --brand-light: #fff7ed;
+
+  --card: #ffffff;
+  --card-border: #e5e7eb;
+  --muted: #64748b;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-light: var(--brand-light);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-muted: var(--muted);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
 }

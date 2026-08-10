@@ -1,0 +1,229 @@
+import { requireActiveUser } from "@/lib/auth/current-user";
+import { createClient } from "@/lib/supabase/server";
+import {
+  getLeadFunnel,
+  getSourceConversion,
+  getOwnerPerformance,
+  getPartnerPerformance,
+  getLostReasons,
+  getMonthlyWonAmount,
+  getOverdueFollowUpCount,
+} from "@/lib/data/reports";
+import { LeadStageBadge } from "@/components/lead-badges";
+
+const inputClass = "rounded-lg border border-card-border px-3 py-2 text-sm";
+
+export default async function ReportsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
+  await requireActiveUser();
+  const { from, to } = await searchParams;
+  const range = { from: from || null, to: to || null };
+
+  const supabase = await createClient();
+  const [funnel, sourceConversion, ownerPerformance, partnerPerformance, lostReasons, monthlyWon, overdueCount] =
+    await Promise.all([
+      getLeadFunnel(supabase, range),
+      getSourceConversion(supabase, range),
+      getOwnerPerformance(supabase, range),
+      getPartnerPerformance(supabase, range),
+      getLostReasons(supabase, range),
+      getMonthlyWonAmount(supabase, range),
+      getOverdueFollowUpCount(supabase),
+    ]);
+
+  const funnelMax = Math.max(1, ...funnel.map((f) => f.count));
+
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="text-2xl font-semibold text-foreground">Raporlar</h1>
+
+      <form method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-card-border bg-card p-4 shadow-sm">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="report-from" className="text-xs font-medium text-muted">Başlangıç</label>
+          <input id="report-from" type="date" name="from" defaultValue={from ?? ""} className={inputClass} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="report-to" className="text-xs font-medium text-muted">Bitiş</label>
+          <input id="report-to" type="date" name="to" defaultValue={to ?? ""} className={inputClass} />
+        </div>
+        <button
+          type="submit"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
+        >
+          Filtrele
+        </button>
+        {(from || to) && (
+          <a href="/reports" className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-background">
+            Temizle
+          </a>
+        )}
+      </form>
+
+      <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-foreground">Aşama Hunisi</h2>
+          <span className="text-xs text-muted">Geciken takip: {overdueCount}</span>
+        </div>
+        <div className="flex flex-col gap-2">
+          {funnel.map((f) => (
+            <div key={f.stage} className="flex items-center gap-3">
+              <div className="w-44 shrink-0">
+                <LeadStageBadge stage={f.stage} />
+              </div>
+              <div className="h-4 flex-1 overflow-hidden rounded-full bg-background">
+                <div
+                  className="h-full rounded-full bg-brand"
+                  style={{ width: `${(f.count / funnelMax) * 100}%` }}
+                />
+              </div>
+              <span className="w-10 text-right text-sm text-foreground">{f.count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
+          <h2 className="mb-4 text-sm font-medium text-foreground">Lead Kaynağına Göre Dönüşüm</h2>
+          {sourceConversion.length === 0 ? (
+            <p className="text-sm text-muted">Veri yok.</p>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-card-border text-muted">
+                <tr>
+                  <th className="py-2 font-medium">Kaynak</th>
+                  <th className="py-2 font-medium">Toplam</th>
+                  <th className="py-2 font-medium">Kazanılan</th>
+                  <th className="py-2 font-medium">Kaybedilen</th>
+                  <th className="py-2 font-medium">Dönüşüm</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sourceConversion.map((s) => (
+                  <tr key={s.source} className="border-b border-card-border last:border-0">
+                    <td className="py-2 text-foreground">{s.source}</td>
+                    <td className="py-2 text-muted">{s.total}</td>
+                    <td className="py-2 text-green-700">{s.won}</td>
+                    <td className="py-2 text-red-700">{s.lost}</td>
+                    <td className="py-2 text-foreground">%{s.conversionRate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
+          <h2 className="mb-4 text-sm font-medium text-foreground">Owner Bazlı Performans</h2>
+          {ownerPerformance.length === 0 ? (
+            <p className="text-sm text-muted">Veri yok.</p>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-card-border text-muted">
+                <tr>
+                  <th className="py-2 font-medium">Owner</th>
+                  <th className="py-2 font-medium">Yeni</th>
+                  <th className="py-2 font-medium">Açık</th>
+                  <th className="py-2 font-medium">Kazanılan</th>
+                  <th className="py-2 font-medium">Kaybedilen</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ownerPerformance.map((o) => (
+                  <tr key={o.ownerId} className="border-b border-card-border last:border-0">
+                    <td className="py-2 text-foreground">{o.ownerName}</td>
+                    <td className="py-2 text-muted">{o.newCount}</td>
+                    <td className="py-2 text-muted">{o.openCount}</td>
+                    <td className="py-2 text-green-700">{o.won}</td>
+                    <td className="py-2 text-red-700">{o.lost}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
+          <h2 className="mb-4 text-sm font-medium text-foreground">Partner Bazlı Performans</h2>
+          {partnerPerformance.length === 0 ? (
+            <p className="text-sm text-muted">Veri yok.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-card-border text-muted">
+                  <tr>
+                    <th className="py-2 font-medium">Partner</th>
+                    <th className="py-2 font-medium">Yönlendirme</th>
+                    <th className="py-2 font-medium">Kabul Oranı</th>
+                    <th className="py-2 font-medium">Ort. Cevap</th>
+                    <th className="py-2 font-medium">Teklif</th>
+                    <th className="py-2 font-medium">Satış</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {partnerPerformance.map((p) => (
+                    <tr key={p.partnerId} className="border-b border-card-border last:border-0">
+                      <td className="py-2 text-foreground">{p.partnerName}</td>
+                      <td className="py-2 text-muted">{p.referralCount}</td>
+                      <td className="py-2 text-muted">%{p.acceptanceRate}</td>
+                      <td className="py-2 text-muted">
+                        {p.avgResponseHours != null ? `${p.avgResponseHours} sa` : "—"}
+                      </td>
+                      <td className="py-2 text-muted">{p.offerCount}</td>
+                      <td className="py-2 text-green-700">{p.salesCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
+          <h2 className="mb-4 text-sm font-medium text-foreground">Kayıp Nedenleri Dağılımı</h2>
+          {lostReasons.length === 0 ? (
+            <p className="text-sm text-muted">Kayıp kaydı yok.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {lostReasons.map((r) => (
+                <div key={r.reason} className="flex items-center justify-between text-sm">
+                  <span className="text-foreground">{r.reason}</span>
+                  <span className="text-muted">{r.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
+        <h2 className="mb-4 text-sm font-medium text-foreground">Aylık Kazanılan Satış Tutarı</h2>
+        {monthlyWon.length === 0 ? (
+          <p className="text-sm text-muted">Henüz kazanılan bir satış yok.</p>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-card-border text-muted">
+              <tr>
+                <th className="py-2 font-medium">Ay</th>
+                <th className="py-2 font-medium">Para Birimi</th>
+                <th className="py-2 font-medium">Toplam Tutar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthlyWon.map((m) => (
+                <tr key={`${m.month}-${m.currency}`} className="border-b border-card-border last:border-0">
+                  <td className="py-2 text-foreground">{m.month}</td>
+                  <td className="py-2 text-muted">{m.currency}</td>
+                  <td className="py-2 text-foreground">{m.totalAmount.toLocaleString("tr-TR")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+}

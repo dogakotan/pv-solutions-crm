@@ -1,0 +1,39 @@
+import { Users, UserPlus, PhoneCall, Handshake, AlertTriangle, ClipboardList, FileText, Trophy, XCircle, TrendingUp } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { StatCard } from "@/components/stat-card";
+import { getAdminLeadKpis } from "@/lib/data/leads";
+
+export default async function AdminDashboardPage() {
+  const supabase = await createClient();
+  const kpis = await getAdminLeadKpis(supabase);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="text-2xl font-semibold text-foreground">Genel Bakış</h1>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <StatCard icon={Users} label="Toplam Lead" value={String(kpis.total)} />
+        <StatCard icon={UserPlus} label="Yeni Lead" value={String(kpis.newLeads)} />
+        <StatCard icon={PhoneCall} label="First Call Bekleyen" value={String(kpis.awaitingFirstCall)} />
+        <StatCard icon={Users} label="Satışa Atanan" value={String(kpis.assignedToSales)} />
+        <StatCard icon={Handshake} label="Partner Bekleyen" value={String(kpis.awaitingPartner)} />
+        <StatCard icon={AlertTriangle} label="Partner Yanıtı Gecikmiş" value={String(kpis.overduePartner)} iconClassName="bg-red-50 text-red-700" />
+        <StatCard icon={ClipboardList} label="Keşif Aşamasında" value={String(kpis.survey)} />
+        <StatCard icon={FileText} label="Teklif Aşamasında" value={String(kpis.proposal)} />
+        <StatCard icon={Trophy} label="Kazanılan" value={String(kpis.won)} iconClassName="bg-green-50 text-green-700" />
+        <StatCard icon={XCircle} label="Kaybedilen" value={String(kpis.lost)} iconClassName="bg-red-50 text-red-700" />
+        <StatCard
+          icon={TrendingUp}
+          label="Dönüşüm Oranı"
+          value={`%${kpis.conversionRate}`}
+          iconClassName="bg-brand-light text-brand"
+        />
+      </div>
+
+      <p className="text-xs text-muted">
+        Satış çalışanı ve partner performans kırılımları (kişi bazlı), yeterli veri
+        birikince ayrı bir raporlama geçişinde eklenecek.
+      </p>
+    </div>
+  );
+}

@@ -1,0 +1,39 @@
+"use client";
+
+import { useActionState } from "react";
+import { requestPasswordReset, type ForgotPasswordState } from "./actions";
+
+const initialState: ForgotPasswordState = {};
+
+export function ForgotPasswordForm() {
+  const [state, formAction, pending] = useActionState(requestPasswordReset, initialState);
+
+  return (
+    <form action={formAction} className="flex w-full flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <label htmlFor="email" className="text-sm font-medium text-foreground">
+          E-posta
+        </label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          autoComplete="email"
+          className="rounded-lg border border-card-border px-3 py-2 outline-none focus:border-brand focus:ring-1 focus:ring-brand"
+        />
+      </div>
+
+      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state.message && <p className="text-sm text-green-700">{state.message}</p>}
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-lg bg-brand px-4 py-2 font-medium text-white transition-colors hover:bg-brand-dark disabled:opacity-50"
+      >
+        {pending ? "Gönderiliyor..." : "Sıfırlama bağlantısı gönder"}
+      </button>
+    </form>
+  );
+}

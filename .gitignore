@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# database backups (bk. docs/BACKUP_AND_EXPORT_PLAN.md) — asla commitlenmez
+/backups
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

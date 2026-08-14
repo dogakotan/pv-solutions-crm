@@ -81,44 +81,24 @@ export async function createLead(
   }
 
   /**
-   * Bu isteğin ağ seviyesinde tekrarlanması (çift tıklama değil — o
-   * client'ta disabled={pending} ile zaten engelleniyor) durumunda
-   * aynı lead'in iki kez oluşmasını önler: anahtar zaten kullanılmışsa
-   * bu isteğin bir tekrarı olduğunu varsayıp işlemi tekrarlamadan
-   * doğrudan başarı sonucuna yönlendiriyoruz. Bilerek insert'ten hemen
-   * önce tüketiliyor — duplicate-check aşamasında tüketilse, "yine de
-   * oluştur" ile aynı token'la yapılan asıl gönderim yanlışlıkla
-   * tekrar sayılıp lead hiç oluşturulmadan başarılı görünürdü.
+   * Lead insert + idempotency key tüketimi create_lead RPC'sinde tek
+   * transaction'da yapılır (bkz. create_lead_rpc migration'ı) — anahtar
+   * zaten kullanılmışsa unique_violation ile döner, bu isteğin ağ
+   * seviyesinde bir tekrarı olduğunu varsayıp işlemi tekrarlamadan
+   * doğrudan başarı sonucuna yönlendiriyoruz.
    */
-  if (idempotencyKey) {
-    const { error: keyError } = await supabase.from("idempotency_keys").insert({ key: idempotencyKey });
-    if (keyError) {
-      if (keyError.code === POSTGRES_UNIQUE_VIOLATION) {
-        redirect("/first-call/lead-pool");
-      }
-      // Anahtar tablosuna yazılamaması işlemi engellemez — bu yalnızca
-      // ek bir koruma katmanı, ana akışın güvenilirliği ona bağlı değil.
-    }
-  }
-
-  const { error } = await supabase.from("leads").insert({
-    customer_type: customerType,
-    customer_name: customerName,
-    phone,
-    city,
-    source,
-    owner_id: userId,
-    created_by: userId,
-    first_call_user_id: userId,
+  const { error } = await supabase.rpc("create_lead", {
+    p_customer_type: customerType,
+    p_customer_name: customerName,
+    p_phone: phone,
+    p_city: city,
+    p_source: source,
+    p_idempotency_key: idempotencyKey,
   });
 
   if (error) {
-    // Anahtar tüketildi ama lead oluşmadı — kullanıcı tekrar denediğinde
-    // (aynı form, aynı token) gerçek bir tekrar denemesi olarak işlensin
-    // diye anahtarı geri alıyoruz; aksi halde bir sonraki deneme "zaten
-    // işlendi" sayılıp lead hiç oluşturulmadan başarılı görünürdü.
-    if (idempotencyKey) {
-      await supabase.rpc("release_idempotency_key", { p_key: idempotencyKey });
+    if (error.code === POSTGRES_UNIQUE_VIOLATION) {
+      redirect("/first-call/lead-pool");
     }
     return { error: "Lead oluşturulamadı: " + error.message };
   }

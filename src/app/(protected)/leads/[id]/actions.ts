@@ -201,31 +201,20 @@ function parseOfferItems(formData: FormData): { items: ParsedOfferItem[]; error?
   return { items };
 }
 
-async function insertOfferVersionItems(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  offerVersionId: string,
-  items: ParsedOfferItem[]
-): Promise<string | null> {
-  if (items.length === 0) return null;
-
-  const { error } = await supabase.from("offer_version_items").insert(
-    items.map((item, index) => ({
-      offer_version_id: offerVersionId,
-      product_code: item.productCode,
-      product_name: item.productName,
-      quantity: item.quantity,
-      unit_price: item.unitPrice,
-      sort_order: index,
-    }))
-  );
-
-  return error ? "Teklif kaydedildi ama ürün kalemleri kaydedilemedi: " + error.message : null;
+function toOfferItemsPayload(items: ParsedOfferItem[]) {
+  return items.map((item, index) => ({
+    product_code: item.productCode,
+    product_name: item.productName,
+    quantity: item.quantity,
+    unit_price: item.unitPrice,
+    sort_order: index,
+  }));
 }
 
 /**
- * `offers` tablosunda offer_no otomatik üretilmiyor (bkz. migration
- * yorumu) — lead_no zaten benzersiz olduğundan ondan türetiyoruz, bir
- * lead'de tek teklif açma modeliyle de çakışma riski olmuyor.
+ * Teklif (offer + ilk revizyon + kalemler) create_offer RPC'sinde tek
+ * transaction'da oluşturulur — bkz. create_offer_and_revise_offer_rpc
+ * migration'ı.
  */
 export async function sendOffer(
   _prevState: OfferFormState,
@@ -260,57 +249,20 @@ export async function sendOffer(
   }
 
   const supabase = await createClient();
-  const { data: lead, error: leadError } = await supabase
-    .from("leads")
-    .select("lead_no")
-    .eq("id", leadId)
-    .single();
+  const { error } = await supabase.rpc("create_offer", {
+    p_lead_id: leadId,
+    p_amount: amount,
+    p_currency: currency,
+    p_vat_included: vatIncluded,
+    p_valid_until: validUntilRaw || undefined,
+    p_scope_summary: scopeSummary || undefined,
+    p_payment_method: paymentMethod || undefined,
+    p_shipping_terms: shippingTerms || undefined,
+    p_items: toOfferItemsPayload(items),
+  });
 
-  if (leadError || !lead) {
-    return { error: "Lead bulunamadı." };
-  }
-
-  const { data: offer, error: offerError } = await supabase
-    .from("offers")
-    .insert({
-      offer_no: `TEKLIF-${lead.lead_no}`,
-      lead_id: leadId,
-      created_by_organization_type: "pv",
-      created_by: userId,
-    })
-    .select("id")
-    .single();
-
-  if (offerError || !offer) {
-    return { error: "Teklif oluşturulamadı: " + (offerError?.message ?? "bilinmeyen hata") };
-  }
-
-  const { data: version, error: versionError } = await supabase
-    .from("offer_versions")
-    .insert({
-      offer_id: offer.id,
-      revision_no: 0,
-      amount,
-      currency,
-      vat_included: vatIncluded,
-      valid_until: validUntilRaw || null,
-      scope_summary: scopeSummary || null,
-      payment_method: paymentMethod || null,
-      shipping_terms: shippingTerms || null,
-      status: "sent",
-      sent_at: new Date().toISOString(),
-      created_by: userId,
-    })
-    .select("id")
-    .single();
-
-  if (versionError || !version) {
-    return { error: "Teklif revizyonu kaydedilemedi: " + (versionError?.message ?? "bilinmeyen hata") };
-  }
-
-  const itemsError = await insertOfferVersionItems(supabase, version.id, items);
-  if (itemsError) {
-    return { error: itemsError };
+  if (error) {
+    return { error: "Teklif oluşturulamadı: " + error.message };
   }
 
   revalidatePath(`/leads/${leadId}`);
@@ -355,57 +307,20 @@ export async function reviseOffer(
   }
 
   const supabase = await createClient();
-  const { data: latestVersions, error: fetchError } = await supabase
-    .from("offer_versions")
-    .select("id, revision_no")
-    .eq("offer_id", offerId)
-    .order("revision_no", { ascending: false })
-    .limit(1);
+  const { error } = await supabase.rpc("revise_offer", {
+    p_offer_id: offerId,
+    p_amount: amount,
+    p_currency: currency,
+    p_vat_included: vatIncluded,
+    p_valid_until: validUntilRaw || undefined,
+    p_scope_summary: scopeSummary || undefined,
+    p_payment_method: paymentMethod || undefined,
+    p_shipping_terms: shippingTerms || undefined,
+    p_items: toOfferItemsPayload(items),
+  });
 
-  if (fetchError) {
-    return { error: "Mevcut revizyonlar okunamadı: " + fetchError.message };
-  }
-
-  const latest = latestVersions?.[0];
-  const nextRevisionNo = (latest?.revision_no ?? -1) + 1;
-
-  if (latest) {
-    const { error: supersedeError } = await supabase
-      .from("offer_versions")
-      .update({ status: "superseded" })
-      .eq("id", latest.id);
-
-    if (supersedeError) {
-      return { error: "Önceki revizyon güncellenemedi: " + supersedeError.message };
-    }
-  }
-
-  const { data: version, error: insertError } = await supabase
-    .from("offer_versions")
-    .insert({
-      offer_id: offerId,
-      revision_no: nextRevisionNo,
-      amount,
-      currency,
-      vat_included: vatIncluded,
-      valid_until: validUntilRaw || null,
-      scope_summary: scopeSummary || null,
-      payment_method: paymentMethod || null,
-      shipping_terms: shippingTerms || null,
-      status: "sent",
-      sent_at: new Date().toISOString(),
-      created_by: userId,
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !version) {
-    return { error: "Revizyon kaydedilemedi: " + (insertError?.message ?? "bilinmeyen hata") };
-  }
-
-  const itemsError = await insertOfferVersionItems(supabase, version.id, items);
-  if (itemsError) {
-    return { error: itemsError };
+  if (error) {
+    return { error: "Revizyon kaydedilemedi: " + error.message };
   }
 
   revalidatePath(`/leads/${leadId}`);

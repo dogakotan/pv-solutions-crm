@@ -58,24 +58,17 @@ export async function createPartnerEmployee(
   const userId = created.user.id;
   const supabase = await createClient();
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .update({ partner_id: partnerId, phone })
-    .eq("id", userId);
+  const { error: provisionError } = await supabase.rpc("provision_partner_employee", {
+    p_user_id: userId,
+    p_partner_id: partnerId,
+    p_phone: phone ?? undefined,
+    p_role: role as "partner_admin" | "partner_employee",
+  });
 
-  const { error: roleError } = profileError
-    ? { error: profileError }
-    : await supabase.rpc("set_user_role", {
-        p_user_id: userId,
-        p_role: role as "partner_admin" | "partner_employee",
-      });
-
-  if (profileError || roleError) {
+  if (provisionError) {
     await admin.auth.admin.deleteUser(userId);
     return {
-      error:
-        "Çalışan kaydedilemedi, hesap geri alındı: " +
-        (profileError?.message ?? roleError?.message ?? "bilinmeyen hata"),
+      error: "Çalışan kaydedilemedi, hesap geri alındı: " + provisionError.message,
     };
   }
 

@@ -1112,6 +1112,133 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_lead: {
+        Args: {
+          p_city: string
+          p_customer_name: string
+          p_customer_type: string
+          p_idempotency_key?: string
+          p_phone: string
+          p_source: string
+        }
+        Returns: {
+          address: string | null
+          alternate_phone: string | null
+          archived_at: string | null
+          battery_interest: string | null
+          building_type: string | null
+          city: string
+          competitor_offer_note: string | null
+          competitor_offer_status: string | null
+          created_at: string
+          created_by: string
+          customer_name: string
+          customer_type: string
+          deleted_at: string | null
+          deleted_by: string | null
+          district: string | null
+          email: string | null
+          estimated_capacity_kwp: number | null
+          ev_interest: string | null
+          first_call_user_id: string | null
+          general_notes: string | null
+          heat_pump_interest: string | null
+          id: string
+          lead_no: string | null
+          lead_score: string | null
+          next_follow_up_at: string | null
+          owner_id: string
+          phone: string
+          pool_interest: string | null
+          priority: string
+          roof_area_m2: number | null
+          sales_user_id: string | null
+          source: string
+          stage: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_offer: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_items?: Json
+          p_lead_id: string
+          p_payment_method?: string
+          p_scope_summary?: string
+          p_shipping_terms?: string
+          p_valid_until?: string
+          p_vat_included: boolean
+        }
+        Returns: {
+          amount: number
+          created_at: string
+          created_by: string
+          currency: string
+          id: string
+          offer_id: string
+          payment_method: string | null
+          revision_no: number
+          scope_summary: string | null
+          sent_at: string | null
+          shipping_terms: string | null
+          status: string
+          valid_until: string | null
+          vat_included: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "offer_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_partner: {
+        Args: {
+          p_address?: string
+          p_capability_codes?: string[]
+          p_city: string
+          p_email?: string
+          p_internal_notes?: string
+          p_name: string
+          p_partner_code?: string
+          p_phone?: string
+          p_pv_owner_id?: string
+          p_service_regions?: string[]
+          p_status?: string
+          p_tax_number?: string
+          p_tax_office?: string
+        }
+        Returns: {
+          address: string | null
+          city: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          partner_code: string | null
+          phone: string | null
+          pv_owner_id: string | null
+          rating: number | null
+          status: string
+          tax_number: string | null
+          tax_office: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "partners"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_offer_version: {
         Args: { p_offer_version_id: string }
         Returns: undefined
@@ -1127,6 +1254,30 @@ export type Database = {
         }[]
       }
       health_check: { Args: never; Returns: boolean }
+      provision_partner_employee: {
+        Args: {
+          p_partner_id: string
+          p_phone?: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean
+          partner_id: string | null
+          phone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       record_sales_outcome: {
         Args: {
           p_accepted_offer_version_id?: string
@@ -1194,6 +1345,41 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "partner_referrals"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      revise_offer: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_items?: Json
+          p_offer_id: string
+          p_payment_method?: string
+          p_scope_summary?: string
+          p_shipping_terms?: string
+          p_valid_until?: string
+          p_vat_included: boolean
+        }
+        Returns: {
+          amount: number
+          created_at: string
+          created_by: string
+          currency: string
+          id: string
+          offer_id: string
+          payment_method: string | null
+          revision_no: number
+          scope_summary: string | null
+          sent_at: string | null
+          shipping_terms: string | null
+          status: string
+          valid_until: string | null
+          vat_included: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "offer_versions"
           isOneToOne: true
           isSetofReturn: false
         }

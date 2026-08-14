@@ -104,54 +104,24 @@ export async function createPartner(
   const capabilities = splitList(formData.get("capabilities"));
   const applicationAreas = formData.getAll("applicationAreas").map(String);
 
-  const { data: partner, error } = await supabase
-    .from("partners")
-    .insert({
-      name,
-      partner_code: partnerCode,
-      phone,
-      tax_number: taxNumber,
-      tax_office: taxOffice,
-      email,
-      city,
-      address,
-      status,
-      pv_owner_id: pvOwnerId,
-      created_by: userId,
-    })
-    .select("id")
-    .single();
+  const { data: partner, error } = await supabase.rpc("create_partner", {
+    p_name: name,
+    p_city: city,
+    p_partner_code: partnerCode ?? undefined,
+    p_phone: phone ?? undefined,
+    p_tax_number: taxNumber ?? undefined,
+    p_tax_office: taxOffice ?? undefined,
+    p_email: email ?? undefined,
+    p_address: address ?? undefined,
+    p_status: status,
+    p_pv_owner_id: pvOwnerId ?? undefined,
+    p_internal_notes: internalNotes ?? undefined,
+    p_service_regions: serviceRegions,
+    p_capability_codes: [...capabilities, ...applicationAreas],
+  });
 
   if (error || !partner) {
     return { error: "Partner oluşturulamadı: " + (error?.message ?? "bilinmeyen hata") };
-  }
-
-  if (internalNotes) {
-    const { error: noteError } = await supabase
-      .from("partner_internal_notes")
-      .insert({ partner_id: partner.id, note: internalNotes });
-    if (noteError) {
-      return { error: "Partner oluşturuldu ama iç not kaydedilemedi: " + noteError.message };
-    }
-  }
-
-  if (serviceRegions.length > 0) {
-    const { error: regionsError } = await supabase
-      .from("partner_service_regions")
-      .insert(serviceRegions.map((region_code) => ({ partner_id: partner.id, region_code })));
-    if (regionsError) {
-      return { error: "Partner oluşturuldu ama hizmet bölgeleri kaydedilemedi: " + regionsError.message };
-    }
-  }
-
-  const allCapabilityCodes = [...capabilities, ...applicationAreas];
-  if (allCapabilityCodes.length > 0) {
-    const { error: capsError } = await supabase
-      .from("partner_capabilities")
-      .insert(allCapabilityCodes.map((capability_code) => ({ partner_id: partner.id, capability_code })));
-    if (capsError) {
-      return { error: "Partner oluşturuldu ama yetkinlik/uygulama alanı kaydedilemedi: " + capsError.message };
-    }
   }
 
   redirect(`/partners/${partner.id}`);

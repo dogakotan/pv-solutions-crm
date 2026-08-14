@@ -10,15 +10,24 @@ import { getFirstCallLeadKpis, getVisibleLeads } from "@/lib/data/leads";
 export default function FirstCallLeadPoolPage() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Lead Havuzu</h1>
-        <Link
-          href="/first-call/new-lead"
-          className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
-        >
-          <UserPlus className="h-4 w-4" aria-hidden="true" />
-          Yeni Lead
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            href="/first-call/assignments"
+            className="flex items-center gap-2 rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-foreground hover:bg-background"
+          >
+            <Send className="h-4 w-4" aria-hidden="true" />
+            Satışa Ata
+          </Link>
+          <Link
+            href="/first-call/new-lead"
+            className="flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
+          >
+            <UserPlus className="h-4 w-4" aria-hidden="true" />
+            Yeni Lead
+          </Link>
+        </div>
       </div>
 
       <Suspense fallback={<KpiGridSkeleton count={5} />}>

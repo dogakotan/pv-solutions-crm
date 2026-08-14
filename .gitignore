@@ -47,3 +47,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# graphify (yerel kod grafiği çıktısı, `graphify update .` ile yeniden üretilir)
+/graphify-out

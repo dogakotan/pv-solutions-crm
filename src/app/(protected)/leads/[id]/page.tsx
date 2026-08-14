@@ -82,7 +82,7 @@ export default async function LeadDetailPage({
     <div className="flex flex-col gap-6">
       <BackLink fallbackHref={getDefaultRouteForRole(appRole)} label="Geri" />
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{lead.leadNo}</h1>
           <p className="text-sm text-muted">
@@ -201,13 +201,15 @@ export default async function LeadDetailPage({
         </div>
       )}
 
-      <Suspense fallback={<CardSkeleton lines={4} />}>
-        <AktivitelerCard leadId={lead.id} />
-      </Suspense>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Suspense fallback={<CardSkeleton lines={4} />}>
+          <AktivitelerCard leadId={lead.id} />
+        </Suspense>
 
-      <Suspense fallback={<CardSkeleton lines={4} />}>
-        <SatisSonucuCard leadId={lead.id} appRole={appRole} />
-      </Suspense>
+        <Suspense fallback={<CardSkeleton lines={4} />}>
+          <SatisSonucuCard leadId={lead.id} appRole={appRole} />
+        </Suspense>
+      </div>
 
       <Suspense fallback={<CardSkeleton lines={3} />}>
         <SurecGecmisiCard leadId={lead.id} />

@@ -8,6 +8,7 @@ import {
   Bell,
   BarChart3,
   Settings,
+  Send,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole } from "@/lib/auth/roles";
@@ -27,6 +28,7 @@ export const menuItems: MenuItem[] = [
   // first_call/sales/partner kendi rolüne özel sayfasını (RLS zaten kendi verisiyle sınırlıyor) kullanmaya devam eder.
   { label: "Leadler", href: "/leads", icon: Users, roles: ["admin"] },
   { label: "Lead Havuzu", href: "/first-call/lead-pool", icon: Users, roles: ["first_call"] },
+  { label: "Satışa Atama", href: "/first-call/assignments", icon: Send, roles: ["first_call"] },
   { label: "Leadlerim", href: "/sales/my-leads", icon: Briefcase, roles: ["sales"] },
   { label: "Bana Yönlendirilenler", href: "/partner/assigned-leads", icon: Handshake, roles: ["partner"] },
   { label: "Partnerler", href: "/partners", icon: Handshake, roles: ["admin"] },

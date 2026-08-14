@@ -1254,6 +1254,13 @@ export type Database = {
         }[]
       }
       health_check: { Args: never; Returns: boolean }
+      list_active_sales_users: {
+        Args: never
+        Returns: {
+          full_name: string
+          id: string
+        }[]
+      }
       provision_partner_employee: {
         Args: {
           p_partner_id: string

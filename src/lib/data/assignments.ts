@@ -83,11 +83,7 @@ export async function getLeadsNeedingPartnerAssignment(
 }
 
 export async function getActiveSalesUsers(supabase: TypedSupabaseClient): Promise<ActiveUserOption[]> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, user_role_assignments!user_role_assignments_user_id_fkey!inner(role)")
-    .eq("is_active", true)
-    .eq("user_role_assignments.role", "pv_sales");
+  const { data, error } = await supabase.rpc("list_active_sales_users");
 
   if (error) throw error;
 

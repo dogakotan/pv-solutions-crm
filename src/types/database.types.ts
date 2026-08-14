@@ -1318,7 +1318,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      release_idempotency_key: { Args: { p_key: string }; Returns: undefined }
       respond_to_referral: {
         Args: {
           p_decision: string

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { loginAs } from "./helpers/auth";
 
 const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
@@ -21,11 +22,7 @@ test.describe("kimlik doğrulanmış akış", () => {
   );
 
   test("giriş yapıp bir sayfa yükleyebilir, hata sınırına düşmez", async ({ page }) => {
-    await page.goto("/login");
-    await page.fill('input[name="email"]', TEST_EMAIL!);
-    await page.fill('input[name="password"]', TEST_PASSWORD!);
-    await page.click('button[type="submit"]');
-    await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 15_000 });
+    await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);
 
     const body = await page.textContent("body");
     expect(body).not.toContain("Bir şeyler ters gitti");

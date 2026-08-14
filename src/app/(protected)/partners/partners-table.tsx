@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Partner, PartnerStatus } from "@/types/partner";
 import { PartnerStatusBadge, PARTNER_STATUS_STYLES } from "./partner-status-badge";
@@ -32,6 +32,15 @@ export function PartnersTable({ partners }: { partners: Partner[] }) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const pagePartners = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Satıra tıklandığında beklemeyi azaltmak için görünen sayfadaki
+  // partnerleri önceden getir — mouseEnter'daki prefetch dokunmatik
+  // cihazlarda (hover olayı yok) hiç tetiklenmiyordu.
+  useEffect(() => {
+    for (const partner of pagePartners) {
+      router.prefetch(`/partners/${partner.id}`);
+    }
+  }, [pagePartners, router]);
 
   if (partners.length === 0) {
     return (

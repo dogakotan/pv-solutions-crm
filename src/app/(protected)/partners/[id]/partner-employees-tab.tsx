@@ -24,36 +24,38 @@ export function PartnerEmployeesTab({
       {employees.length === 0 ? (
         <p className="text-sm text-muted">Bu partnerin henüz kayıtlı çalışanı yok.</p>
       ) : (
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-card-border text-muted">
-            <tr>
-              <th className="py-2 font-medium">Ad Soyad</th>
-              <th className="py-2 font-medium">Rol</th>
-              <th className="py-2 font-medium">Telefon</th>
-              <th className="py-2 font-medium">Durum</th>
-            </tr>
-          </thead>
-          <tbody>
-            {employees.map((employee) => (
-              <tr key={employee.id} className="border-b border-card-border last:border-0">
-                <td className="py-2 text-foreground">{employee.fullName}</td>
-                <td className="py-2 text-muted">{ROLE_LABELS[employee.role]}</td>
-                <td className="py-2 text-muted">{employee.phone}</td>
-                <td className="py-2">
-                  <span
-                    className={
-                      employee.isActive
-                        ? "rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"
-                        : "rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700"
-                    }
-                  >
-                    {employee.isActive ? "Aktif" : "Pasif"}
-                  </span>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-card-border text-muted">
+              <tr>
+                <th className="py-2 font-medium">Ad Soyad</th>
+                <th className="py-2 font-medium">Rol</th>
+                <th className="py-2 font-medium">Telefon</th>
+                <th className="py-2 font-medium">Durum</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {employees.map((employee) => (
+                <tr key={employee.id} className="border-b border-card-border last:border-0">
+                  <td className="py-2 text-foreground">{employee.fullName}</td>
+                  <td className="py-2 text-muted">{ROLE_LABELS[employee.role]}</td>
+                  <td className="py-2 text-muted">{employee.phone}</td>
+                  <td className="py-2">
+                    <span
+                      className={
+                        employee.isActive
+                          ? "rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"
+                          : "rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700"
+                      }
+                    >
+                      {employee.isActive ? "Aktif" : "Pasif"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

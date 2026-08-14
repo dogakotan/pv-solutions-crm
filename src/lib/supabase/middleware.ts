@@ -1,17 +1,27 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Middleware içinde oturum (session) cookie'lerini tazeleyen yardımcı.
+ * Middleware'in bu istekte doğruladığı kullanıcının id'sini taşıyan
+ * request header'ı. `lib/auth/current-user.ts#getAuthUser` bunu okuyarak
+ * supabase.auth.getUser()'ı (Auth sunucusuna network round-trip) sayfa
+ * render aşamasında TEKRAR çağırmaktan kaçınır — middleware zaten her
+ * eşleşen istekte bunu bir kez yapıyor (bkz. matcher, proxy.ts).
  *
- * Bu fonksiyon her istekte çalışarak süresi dolmuş access token'ları
- * yeniler ve güncel cookie'leri response'a yazar. Faz 1'de gerçek
- * route koruması (korumalı layout + rol kontrolü) burada değil,
- * ilgili layout/page içinde supabase.auth.getUser() ile yapılacaktır;
- * middleware yalnızca cookie senkronizasyonundan sorumludur.
+ * Güvenlik: bu header'a yalnızca BURADA, middleware'in kendi
+ * getUser() sonucuna göre yazılır ve her istekte üzerine yazılır —
+ * istemcinin gönderdiği herhangi bir aynı-adlı header, middleware bu
+ * satırı çalıştırdığı anda ezilir, hiçbir zaman geçmez. Kullanıcı
+ * geçersizse boş string yazılır (yokluk = kimliksiz, "fail closed").
+ */
+export const VERIFIED_USER_ID_HEADER = "x-pv-verified-user-id";
+
+/**
+ * Middleware içinde oturum (session) cookie'lerini tazeleyen ve
+ * doğrulanmış kullanıcı id'sini downstream'e taşıyan yardımcı.
  */
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+  let cookiesToApply: { name: string; value: string; options: CookieOptions }[] = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,19 +35,24 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
+          cookiesToApply = cookiesToSet;
         },
       },
     }
   );
 
-  // Token yenilemesini tetiklemek için kullanıcıyı Auth sunucusundan
-  // doğrulatıyoruz. Dönen değer bu fazda kullanılmıyor; Faz 1'de
-  // korumalı route mantığı buraya eklenecek.
-  await supabase.auth.getUser();
+  // Token yenilemesini tetiklemek ve kullanıcıyı doğrulamak için Auth
+  // sunucusuna gidiyoruz — bu artık istek başına TEK Auth round-trip'i.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  return supabaseResponse;
+  request.headers.set(VERIFIED_USER_ID_HEADER, user?.id ?? "");
+
+  const response = NextResponse.next({ request });
+  cookiesToApply.forEach(({ name, value, options }) =>
+    response.cookies.set(name, value, options)
+  );
+
+  return response;
 }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { getVerifiedUserId } from "@/lib/auth/current-user";
 
 export default function Home() {
   return (
@@ -11,11 +11,8 @@ export default function Home() {
 }
 
 async function HomeRedirect() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getVerifiedUserId();
 
-  redirect(user ? "/dashboard" : "/login");
+  redirect(userId ? "/dashboard" : "/login");
   return null;
 }

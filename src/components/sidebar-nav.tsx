@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { menuItems } from "@/components/menu-items";
+import { useSidebar } from "@/components/sidebar-shell";
 import type { AppRole } from "@/lib/auth/roles";
 
 /**
@@ -13,25 +14,27 @@ import type { AppRole } from "@/lib/auth/roles";
  */
 export function SidebarNav({ role }: { role: AppRole }) {
   const pathname = usePathname();
+  const { collapsed } = useSidebar();
   const visibleItems = menuItems.filter((item) => item.roles.includes(role));
 
   return (
     <nav className="mt-8 flex flex-1 flex-col gap-1">
       {visibleItems.map(({ href, label, icon: Icon }) => {
         const isActive = pathname === href || pathname.startsWith(`${href}/`);
+        const base = "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium";
+        const state = isActive
+          ? "bg-brand text-white"
+          : "text-muted hover:bg-background hover:text-foreground";
 
         return (
           <Link
             key={href}
             href={href}
-            className={
-              isActive
-                ? "flex items-center gap-3 rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white"
-                : "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted hover:bg-background hover:text-foreground"
-            }
+            title={collapsed ? label : undefined}
+            className={`${base} ${state} ${collapsed ? "justify-center" : ""}`}
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-            {label}
+            {!collapsed && label}
           </Link>
         );
       })}

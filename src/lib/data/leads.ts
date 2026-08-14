@@ -23,11 +23,10 @@ export type LeadListItem = {
   stage: LeadStage;
   leadScore: LeadScore | null;
   nextFollowUpAt: string | null;
-  createdAt: string;
 };
 
 function mapLead(
-  row: Pick<LeadRow, "id" | "lead_no" | "customer_name" | "city" | "stage" | "lead_score" | "next_follow_up_at" | "created_at">
+  row: Pick<LeadRow, "id" | "lead_no" | "customer_name" | "city" | "stage" | "lead_score" | "next_follow_up_at">
 ): LeadListItem {
   return {
     id: row.id,
@@ -37,14 +36,13 @@ function mapLead(
     stage: row.stage as LeadStage,
     leadScore: row.lead_score as LeadScore | null,
     nextFollowUpAt: row.next_follow_up_at,
-    createdAt: row.created_at,
   };
 }
 
 export async function getVisibleLeads(supabase: TypedSupabaseClient, limit = 50): Promise<LeadListItem[]> {
   const { data, error } = await supabase
     .from("leads")
-    .select("id, lead_no, customer_name, city, stage, lead_score, next_follow_up_at, created_at")
+    .select("id, lead_no, customer_name, city, stage, lead_score, next_follow_up_at")
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -55,11 +53,7 @@ export async function getVisibleLeads(supabase: TypedSupabaseClient, limit = 50)
 export type LeadDetail = {
   id: string;
   leadNo: string;
-  customerType: "individual" | "company";
   customerName: string;
-  phone: string;
-  alternatePhone: string | null;
-  email: string | null;
   city: string;
   district: string | null;
   address: string | null;
@@ -70,18 +64,11 @@ export type LeadDetail = {
   heatPumpInterest: string | null;
   evInterest: string | null;
   batteryInterest: string | null;
-  competitorOfferStatus: string | null;
-  competitorOfferNote: string | null;
-  source: string;
-  priority: string;
   stage: LeadStage;
   leadScore: LeadScore | null;
   nextFollowUpAt: string | null;
   generalNotes: string | null;
-  createdAt: string;
   ownerName: string;
-  firstCallUserName: string | null;
-  salesUserName: string | null;
 };
 
 type NameEmbed = { full_name: string } | { full_name: string }[] | null;
@@ -93,14 +80,11 @@ function extractName(embed: NameEmbed): string | null {
 }
 
 const LEAD_DETAIL_SELECT = `
-  id, lead_no, customer_type, customer_name, phone, alternate_phone, email,
+  id, lead_no, customer_name,
   city, district, address, building_type, roof_area_m2, estimated_capacity_kwp,
   pool_interest, heat_pump_interest, ev_interest, battery_interest,
-  competitor_offer_status, competitor_offer_note, source, priority, stage,
-  lead_score, next_follow_up_at, general_notes, created_at,
-  owner:profiles!leads_owner_id_fkey(full_name),
-  first_call_user:profiles!leads_first_call_user_id_fkey(full_name),
-  sales_user:profiles!leads_sales_user_id_fkey(full_name)
+  stage, lead_score, next_follow_up_at, general_notes,
+  owner:profiles!leads_owner_id_fkey(full_name)
 `;
 
 export async function getLeadById(supabase: TypedSupabaseClient, id: string): Promise<LeadDetail | null> {
@@ -117,11 +101,7 @@ export async function getLeadById(supabase: TypedSupabaseClient, id: string): Pr
   return {
     id: data.id,
     leadNo: data.lead_no ?? "",
-    customerType: data.customer_type as "individual" | "company",
     customerName: data.customer_name,
-    phone: data.phone,
-    alternatePhone: data.alternate_phone,
-    email: data.email,
     city: data.city,
     district: data.district,
     address: data.address,
@@ -132,18 +112,73 @@ export async function getLeadById(supabase: TypedSupabaseClient, id: string): Pr
     heatPumpInterest: data.heat_pump_interest,
     evInterest: data.ev_interest,
     batteryInterest: data.battery_interest,
-    competitorOfferStatus: data.competitor_offer_status,
-    competitorOfferNote: data.competitor_offer_note,
-    source: data.source,
-    priority: data.priority,
     stage: data.stage as LeadStage,
     leadScore: data.lead_score as LeadScore | null,
     nextFollowUpAt: data.next_follow_up_at,
     generalNotes: data.general_notes,
-    createdAt: data.created_at,
     ownerName: extractName(data.owner as NameEmbed) ?? "—",
-    firstCallUserName: extractName(data.first_call_user as NameEmbed),
-    salesUserName: extractName(data.sales_user as NameEmbed),
+  };
+}
+
+type PartnerNameEmbed = { name: string } | { name: string }[] | null;
+
+/**
+ * Lead'e en son gönderilen yönlendirmenin partnerini döner (durumdan
+ * bağımsız — henüz yanıtlanmamış olsa da "atanan partner" budur).
+ */
+export async function getAssignedPartnerNameForLead(
+  supabase: TypedSupabaseClient,
+  leadId: string
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("partner_referrals")
+    .select("partners(name)")
+    .eq("lead_id", leadId)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const embed = data.partners as PartnerNameEmbed;
+  const row = Array.isArray(embed) ? embed[0] : embed;
+  return row?.name ?? null;
+}
+
+export type ActiveReferral = {
+  partnerName: string;
+  status: PartnerReferralStatus;
+};
+
+/**
+ * `partner_referrals_one_active_per_lead_idx` (closed_at is null) her lead
+ * için en fazla bir aktif yönlendirmeye izin verir — bu yüzden yeni bir
+ * partner ataması önerisi göstermeden önce mevcut aktif atamayı bilmemiz
+ * gerekiyor (varsa öneri yerine mevcut atama gösterilir).
+ */
+export async function getActiveReferralForLead(
+  supabase: TypedSupabaseClient,
+  leadId: string
+): Promise<ActiveReferral | null> {
+  const { data, error } = await supabase
+    .from("partner_referrals")
+    .select("status, partners(name)")
+    .eq("lead_id", leadId)
+    .is("closed_at", null)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const embed = data.partners as PartnerNameEmbed;
+  const row = Array.isArray(embed) ? embed[0] : embed;
+
+  return {
+    partnerName: row?.name ?? "—",
+    status: data.status as PartnerReferralStatus,
   };
 }
 
@@ -167,8 +202,6 @@ export type LeadStageHistoryItem = {
   id: string;
   fromStage: LeadStage | null;
   toStage: LeadStage;
-  changeSource: string;
-  reason: string | null;
   changedByName: string | null;
   changedAt: string;
 };
@@ -179,7 +212,7 @@ export async function getLeadStageHistory(
 ): Promise<LeadStageHistoryItem[]> {
   const { data, error } = await supabase
     .from("lead_stage_history")
-    .select("id, from_stage, to_stage, change_source, reason, changed_at, changed_by:profiles(full_name)")
+    .select("id, from_stage, to_stage, changed_at, changed_by:profiles(full_name)")
     .eq("lead_id", leadId)
     .order("changed_at", { ascending: false });
 
@@ -189,8 +222,6 @@ export async function getLeadStageHistory(
     id: row.id,
     fromStage: row.from_stage as LeadStage | null,
     toStage: row.to_stage as LeadStage,
-    changeSource: row.change_source,
-    reason: row.reason,
     changedByName: extractName(row.changed_by as NameEmbed),
     changedAt: row.changed_at,
   }));
@@ -257,7 +288,6 @@ export async function getFirstCallLeadKpis(supabase: TypedSupabaseClient) {
     { count: contacted },
     { count: unscored },
     { count: readyForSales },
-    { count: total },
   ] = await Promise.all([
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "new"),
     supabase.from("leads").select("id", { count: "exact", head: true })
@@ -265,7 +295,6 @@ export async function getFirstCallLeadKpis(supabase: TypedSupabaseClient) {
     supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "contacted"),
     supabase.from("leads").select("id", { count: "exact", head: true }).is("lead_score", null).neq("stage", "new"),
     supabase.from("leads").select("id", { count: "exact", head: true }).not("lead_score", "is", null).is("sales_user_id", null),
-    supabase.from("leads").select("id", { count: "exact", head: true }).is("deleted_at", null),
   ]);
 
   return {
@@ -274,56 +303,27 @@ export async function getFirstCallLeadKpis(supabase: TypedSupabaseClient) {
     contacted: contacted ?? 0,
     unscored: unscored ?? 0,
     readyForSales: readyForSales ?? 0,
-    total: total ?? 0,
   };
 }
 
 export async function getSalesLeadKpis(supabase: TypedSupabaseClient) {
   const { start, end } = todayRange();
 
-  const [
-    { count: total },
-    { count: dueToday },
-    { count: hot },
-    { count: warm },
-    { count: mid },
-    { count: cold },
-    { count: proposalPreparing },
-    { count: negotiation },
-    { count: won },
-    { count: lost },
-  ] = await Promise.all([
+  const [{ count: total }, { count: dueToday }] = await Promise.all([
     supabase.from("leads").select("id", { count: "exact", head: true }).is("deleted_at", null),
     supabase.from("leads").select("id", { count: "exact", head: true })
       .gte("next_follow_up_at", start).lte("next_follow_up_at", end),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("lead_score", "hot"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("lead_score", "warm"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("lead_score", "mid"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("lead_score", "cold"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "proposal_preparing"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "negotiation"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "won"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "lost"),
   ]);
 
   return {
     total: total ?? 0,
     dueToday: dueToday ?? 0,
-    hot: hot ?? 0,
-    warm: warm ?? 0,
-    mid: mid ?? 0,
-    cold: cold ?? 0,
-    proposalPreparing: proposalPreparing ?? 0,
-    negotiation: negotiation ?? 0,
-    won: won ?? 0,
-    lost: lost ?? 0,
   };
 }
 
 export type PartnerReferralListItem = {
   id: string;
   status: PartnerReferralStatus;
-  sentAt: string;
   responseDueAt: string;
   leadNo: string;
   customerName: string;
@@ -362,7 +362,6 @@ export async function getVisiblePartnerReferrals(
     return [{
       id: row.id,
       status: row.status as PartnerReferralStatus,
-      sentAt: row.sent_at,
       responseDueAt: row.response_due_at,
       leadNo: lead.lead_no,
       customerName: lead.customer_name,
@@ -390,7 +389,9 @@ export async function getPartnerSiteVisits(supabase: TypedSupabaseClient): Promi
   const { data, error } = await supabase
     .from("partner_referrals")
     .select("id, leads!inner(lead_no, customer_name, city, next_follow_up_at)")
-    .eq("leads.stage", "survey_scheduled");
+    .eq("leads.stage", "survey_scheduled")
+    .order("next_follow_up_at", { foreignTable: "leads", ascending: true, nullsFirst: false })
+    .limit(100);
 
   if (error) throw error;
 

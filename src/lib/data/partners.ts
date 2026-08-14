@@ -130,7 +130,7 @@ async function computePartnerStatsByPartner(
   return statsMap;
 }
 
-const PARTNER_SELECT = "id, partner_code, name, tax_number, tax_office, phone, email, city, address, status, created_at, profiles!partners_pv_owner_id_fkey(full_name)";
+const PARTNER_SELECT = "id, partner_code, name, tax_number, tax_office, phone, email, city, address, status, rating, created_at, profiles!partners_pv_owner_id_fkey(full_name)";
 
 type PartnerRow = {
   id: string;
@@ -143,6 +143,7 @@ type PartnerRow = {
   city: string | null;
   address: string | null;
   status: string;
+  rating: number | null;
   created_at: string;
   profiles: OwnerEmbed;
 };
@@ -164,6 +165,7 @@ function buildPartner(
     city: row.city ?? "",
     address: row.address,
     status: row.status as PartnerStatus,
+    rating: row.rating,
     serviceRegions: regions,
     capabilities: caps.capabilities,
     applicationAreas: caps.applicationAreas,
@@ -212,6 +214,71 @@ export async function getPartnerInternalNote(supabase: TypedSupabaseClient, part
     .maybeSingle();
 
   return data?.note ?? null;
+}
+
+export type RecommendedPartner = {
+  id: string;
+  name: string;
+  city: string;
+  serviceRegions: string[];
+  rating: number;
+};
+
+/**
+ * Bir lead için "önce semte, sonra puana göre" ilk 3 partneri önerir.
+ * `region_code` serbest metin olduğundan (bkz. partners/new/actions.ts)
+ * lead'in semti/şehri ile partnerin service_regions/city'si arasında
+ * case-insensitive eşleşme aranır; adaylar `partners.rating` (0.0-5.0,
+ * admin tarafından elle girilen performans puanı) alanına göre sıralanıp
+ * en yüksek 3'ü döner.
+ */
+export async function getRecommendedPartnersForLead(
+  supabase: TypedSupabaseClient,
+  lead: { city: string; district: string | null }
+): Promise<RecommendedPartner[]> {
+  const regionTerms = [lead.district, lead.city].filter((v): v is string => Boolean(v && v.trim()));
+  const partnerIds = new Set<string>();
+
+  const [regionResult, cityResult] = await Promise.all([
+    regionTerms.length > 0
+      ? supabase
+          .from("partner_service_regions")
+          .select("partner_id, region_code")
+          .or(regionTerms.map((term) => `region_code.ilike.${term}`).join(","))
+      : Promise.resolve({ data: [], error: null }),
+    supabase.from("partners").select("id").eq("status", "active").ilike("city", lead.city),
+  ]);
+
+  if (regionResult.error) throw regionResult.error;
+  for (const row of regionResult.data ?? []) partnerIds.add(row.partner_id);
+
+  if (cityResult.error) throw cityResult.error;
+  for (const row of cityResult.data ?? []) partnerIds.add(row.id);
+
+  if (partnerIds.size === 0) return [];
+
+  const { data, error } = await supabase
+    .from("partners")
+    .select(PARTNER_SELECT)
+    .eq("status", "active")
+    .in("id", Array.from(partnerIds));
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as PartnerRow[];
+  const ids = rows.map((row) => row.id);
+  const regionsMap = await fetchServiceRegionsByPartner(supabase, ids);
+
+  return rows
+    .map((row) => ({
+      id: row.id,
+      name: row.name,
+      city: row.city ?? "",
+      serviceRegions: regionsMap.get(row.id) ?? [],
+      rating: row.rating ?? 0,
+    }))
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 3);
 }
 
 export async function getPartnerById(supabase: TypedSupabaseClient, id: string): Promise<Partner | null> {

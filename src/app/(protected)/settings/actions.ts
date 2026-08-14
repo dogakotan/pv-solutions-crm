@@ -1,37 +1,50 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getVerifiedUserId } from "@/lib/auth/current-user";
 
 export type UpdateProfileState = {
   error?: string;
   success?: boolean;
 };
 
+const updateProfileSchema = z.object({
+  fullName: z.string().trim().min(1, "Ad soyad zorunludur.").max(200),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[0-9+()\s-]{0,20}$/, "Telefon numarası geçersiz."),
+});
+
 export async function updateProfile(
   _prevState: UpdateProfileState,
   formData: FormData
 ): Promise<UpdateProfileState> {
-  const fullName = String(formData.get("fullName") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim() || null;
+  const parsed = updateProfileSchema.safeParse({
+    fullName: String(formData.get("fullName") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+  });
 
-  if (!fullName) {
-    return { error: "Ad soyad zorunludur." };
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Girilen bilgiler geçersiz." };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { fullName, phone: parsedPhone } = parsed.data;
+  const phone = parsedPhone || null;
 
-  if (!user) {
+  const userId = await getVerifiedUserId();
+
+  if (!userId) {
     return { error: "Oturum bulunamadı." };
   }
 
+  const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
     .update({ full_name: fullName, phone })
-    .eq("id", user.id);
+    .eq("id", userId);
 
   if (error) {
     return { error: "Profil güncellenemedi: " + error.message };

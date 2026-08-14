@@ -6,7 +6,6 @@ type TypedSupabaseClient = SupabaseClient<Database>;
 
 export type NotificationItem = {
   id: string;
-  type: string;
   title: string;
   message: string | null;
   entityType: string | null;
@@ -18,7 +17,6 @@ export type NotificationItem = {
 
 function mapNotification(row: {
   id: string;
-  type: string;
   title: string;
   message: string | null;
   entity_type: string | null;
@@ -29,7 +27,6 @@ function mapNotification(row: {
 }): NotificationItem {
   return {
     id: row.id,
-    type: row.type,
     title: row.title,
     message: row.message,
     entityType: row.entity_type,
@@ -46,7 +43,7 @@ export async function getMyNotifications(
 ): Promise<NotificationItem[]> {
   const { data, error } = await supabase
     .from("notifications")
-    .select("id, type, title, message, entity_type, entity_id, priority, read_at, created_at")
+    .select("id, title, message, entity_type, entity_id, priority, read_at, created_at")
     .order("created_at", { ascending: false })
     .limit(limit);
 

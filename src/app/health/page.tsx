@@ -22,9 +22,12 @@ async function ConnectionStatus() {
   if (envUrl && envKey && !envUrl.includes("xxxxxxxxxxxx")) {
     try {
       const supabase = await createClient();
-      // Gerçek bağlantı doğrulaması: oturum yoksa da bu çağrı
-      // Supabase Auth sunucusuna ulaşıp ulaşamadığımızı gösterir.
-      const { error } = await supabase.auth.getSession();
+      // getSession() sadece cookie'deki JWT'yi yerel olarak decode eder,
+      // ağa hiç çıkmaz — Postgres'in erişilebilir olduğunu göstermez.
+      // Gerçek bir kullanıcı tablosuna anon ile sorgu atmak da grant/RLS
+      // nedeniyle "permission denied" ile yanlış-pozitif hata verir; bu
+      // yüzden hiçbir veriye dokunmayan, anon'a açık bir RPC kullanılıyor.
+      const { error } = await supabase.rpc("health_check");
       connectionStatus = error ? "error" : "ok";
       errorMessage = error?.message ?? null;
     } catch (err) {

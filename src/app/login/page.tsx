@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { getVerifiedUserId } from "@/lib/auth/current-user";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { AuthCard } from "@/components/auth-card";
 import { LoginForm } from "./login-form";
@@ -29,12 +29,9 @@ async function LoginContent({
 }: {
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getVerifiedUserId();
 
-  if (user) {
+  if (userId) {
     redirect("/dashboard");
   }
 

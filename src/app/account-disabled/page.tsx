@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { getVerifiedUserId } from "@/lib/auth/current-user";
 import { AuthCard } from "@/components/auth-card";
 import { logout } from "@/app/(protected)/actions";
 
@@ -28,12 +28,9 @@ export default function AccountDisabledPage() {
 }
 
 async function AuthGate() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getVerifiedUserId();
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 

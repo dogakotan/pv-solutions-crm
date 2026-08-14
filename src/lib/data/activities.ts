@@ -66,6 +66,39 @@ function extractLead(embed: LeadEmbed) {
   return Array.isArray(embed) ? (embed[0] ?? null) : embed;
 }
 
+type FeedRow = {
+  id: string;
+  activity_type: string;
+  visibility: string;
+  title: string;
+  description: string | null;
+  occurred_at: string | null;
+  next_follow_up_at: string | null;
+  created_at: string;
+  created_by: NameEmbed;
+  leads: LeadEmbed;
+};
+
+function mapFeedRow(row: FeedRow): ActivityFeedItem | null {
+  const lead = extractLead(row.leads);
+  if (!lead) return null;
+
+  return {
+    id: row.id,
+    activityType: row.activity_type as ActivityType,
+    visibility: row.visibility as ActivityVisibility,
+    title: row.title,
+    description: row.description,
+    occurredAt: row.occurred_at,
+    nextFollowUpAt: row.next_follow_up_at,
+    createdByName: extractName(row.created_by),
+    createdAt: row.created_at,
+    leadId: lead.id,
+    leadNo: lead.lead_no,
+    customerName: lead.customer_name,
+  };
+}
+
 export async function getVisibleActivities(
   supabase: TypedSupabaseClient,
   limit = 50
@@ -80,24 +113,33 @@ export async function getVisibleActivities(
 
   if (error) throw error;
 
-  return (data ?? []).flatMap((row) => {
-    const lead = extractLead(row.leads as LeadEmbed);
-    if (!lead) return [];
-    return [{
-      id: row.id,
-      activityType: row.activity_type as ActivityType,
-      visibility: row.visibility as ActivityVisibility,
-      title: row.title,
-      description: row.description,
-      occurredAt: row.occurred_at,
-      nextFollowUpAt: row.next_follow_up_at,
-      createdByName: extractName(row.created_by as NameEmbed),
-      createdAt: row.created_at,
-      leadId: lead.id,
-      leadNo: lead.lead_no,
-      customerName: lead.customer_name,
-    }];
-  });
+  return ((data ?? []) as unknown as FeedRow[]).flatMap((row) => mapFeedRow(row) ?? []);
+}
+
+/**
+ * Haftalık ajanda görünümü için: bu tarih aralığında (genelde bir hafta,
+ * [start, end) yarı açık) "sonraki takip" günü olan aktiviteler.
+ * `created_at`e göre sıralanan getVisibleActivities'in sabit limitinin
+ * dışında kalabilecek eski ama takibi bu haftaya düşen kayıtları
+ * kaçırmamak için ayrı, tarih aralığına göre filtrelenen bir sorgu.
+ */
+export async function getActivitiesDueInRange(
+  supabase: TypedSupabaseClient,
+  startIso: string,
+  endIso: string
+): Promise<ActivityFeedItem[]> {
+  const { data, error } = await supabase
+    .from("activities")
+    .select(
+      `${ACTIVITY_SELECT}, leads(id, lead_no, customer_name)`
+    )
+    .gte("next_follow_up_at", startIso)
+    .lt("next_follow_up_at", endIso)
+    .order("next_follow_up_at", { ascending: true });
+
+  if (error) throw error;
+
+  return ((data ?? []) as unknown as FeedRow[]).flatMap((row) => mapFeedRow(row) ?? []);
 }
 
 /**

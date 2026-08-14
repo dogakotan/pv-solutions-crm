@@ -20,11 +20,10 @@ export function OfferStatusBadge({ status }: { status: OfferStatus }) {
 const VERSION_STATUS_STYLES: Record<OfferVersionStatus, { label: string; className: string }> = {
   draft: { label: "Taslak", className: "bg-neutral-100 text-neutral-600" },
   sent: { label: "Gönderildi", className: "bg-blue-50 text-blue-700" },
-  superseded: { label: "Yerini Aldı", className: "bg-neutral-100 text-neutral-600" },
+  superseded: { label: "Eski Revizyon", className: "bg-neutral-100 text-neutral-600" },
   accepted: { label: "Kabul Edildi", className: "bg-green-50 text-green-700" },
   rejected: { label: "Reddedildi", className: "bg-red-50 text-red-700" },
   expired: { label: "Süresi Doldu", className: "bg-red-50 text-red-700" },
-  withdrawn: { label: "Geri Çekildi", className: "bg-neutral-100 text-neutral-600" },
 };
 
 export function OfferVersionStatusBadge({ status }: { status: OfferVersionStatus }) {

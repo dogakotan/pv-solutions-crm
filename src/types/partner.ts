@@ -2,8 +2,9 @@
  * Doküman 14.4 (`partners` tablosu) ile hizalı frontend tipi.
  * `stats` gerçek verilerden hesaplanır: totalLeads/activeLeads
  * partner_referrals'tan, sales/conversionRate sales_outcomes'tan.
- * `satisfaction` kaldırıldı — hiçbir tabloda karşılığı yok (anket/
- * puanlama sistemi henüz kurulmadı).
+ * `rating` (0.0-5.0) `partners.rating` kolonundan gelir — admin
+ * tarafından elle girilen bir performans/memnuniyet puanı, anket
+ * sisteminden değil.
  */
 export type PartnerStatus = "candidate" | "active" | "suspended" | "inactive";
 
@@ -33,6 +34,7 @@ export type Partner = {
   city: string;
   address: string | null;
   status: PartnerStatus;
+  rating: number | null;
   serviceRegions: string[];
   capabilities: string[];
   applicationAreas: string[];

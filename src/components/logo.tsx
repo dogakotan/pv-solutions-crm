@@ -5,7 +5,13 @@ const RAY_COUNT = 8;
  * Gerçek marka dosyası (SVG/PNG) geldiğinde bu bileşenin içeriği
  * değiştirilecek, kullanım yerleri (Logo import'u) aynı kalabilir.
  */
-export function Logo({ withSubtitle = true }: { withSubtitle?: boolean }) {
+export function Logo({
+  withSubtitle = true,
+  iconOnly = false,
+}: {
+  withSubtitle?: boolean;
+  iconOnly?: boolean;
+}) {
   return (
     <div className="flex items-center gap-2.5">
       <svg viewBox="0 0 32 32" className="h-8 w-8 shrink-0" aria-hidden="true">
@@ -24,13 +30,15 @@ export function Logo({ withSubtitle = true }: { withSubtitle?: boolean }) {
           />
         ))}
       </svg>
-      <div className="leading-tight">
-        <span className="text-lg font-bold tracking-tight">
-          <span className="text-foreground">pv</span>{" "}
-          <span className="font-semibold text-muted">solutions</span>
-        </span>
-        {withSubtitle && <p className="text-xs text-muted">Partner Lead CRM</p>}
-      </div>
+      {!iconOnly && (
+        <div className="leading-tight">
+          <span className="text-lg font-bold tracking-tight">
+            <span className="text-foreground">pv</span>{" "}
+            <span className="font-semibold text-muted">solutions</span>
+          </span>
+          {withSubtitle && <p className="text-xs text-muted">Partner Lead CRM</p>}
+        </div>
+      )}
     </div>
   );
 }

@@ -134,6 +134,21 @@ export type Database = {
           },
         ]
       }
+      idempotency_keys: {
+        Row: {
+          created_at: string
+          key: string
+        }
+        Insert: {
+          created_at?: string
+          key: string
+        }
+        Update: {
+          created_at?: string
+          key?: string
+        }
+        Relationships: []
+      }
       lead_internal_notes: {
         Row: {
           lead_id: string
@@ -430,48 +445,92 @@ export type Database = {
           },
         ]
       }
+      offer_version_items: {
+        Row: {
+          created_at: string
+          id: string
+          offer_version_id: string
+          product_code: string | null
+          product_name: string
+          quantity: number
+          sort_order: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          offer_version_id: string
+          product_code?: string | null
+          product_name: string
+          quantity: number
+          sort_order?: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          offer_version_id?: string
+          product_code?: string | null
+          product_name?: string
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_version_items_offer_version_id_fkey"
+            columns: ["offer_version_id"]
+            isOneToOne: false
+            referencedRelation: "offer_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_versions: {
         Row: {
           amount: number
-          capacity_kwp: number
           created_at: string
           created_by: string
           currency: string
           id: string
           offer_id: string
+          payment_method: string | null
           revision_no: number
           scope_summary: string | null
           sent_at: string | null
+          shipping_terms: string | null
           status: string
           valid_until: string | null
           vat_included: boolean
         }
         Insert: {
           amount: number
-          capacity_kwp: number
           created_at?: string
           created_by: string
           currency: string
           id?: string
           offer_id: string
+          payment_method?: string | null
           revision_no: number
           scope_summary?: string | null
           sent_at?: string | null
+          shipping_terms?: string | null
           status?: string
           valid_until?: string | null
           vat_included?: boolean
         }
         Update: {
           amount?: number
-          capacity_kwp?: number
           created_at?: string
           created_by?: string
           currency?: string
           id?: string
           offer_id?: string
+          payment_method?: string | null
           revision_no?: number
           scope_summary?: string | null
           sent_at?: string | null
+          shipping_terms?: string | null
           status?: string
           valid_until?: string | null
           vat_included?: boolean
@@ -735,6 +794,7 @@ export type Database = {
           partner_code: string | null
           phone: string | null
           pv_owner_id: string | null
+          rating: number | null
           status: string
           tax_number: string | null
           tax_office: string | null
@@ -751,6 +811,7 @@ export type Database = {
           partner_code?: string | null
           phone?: string | null
           pv_owner_id?: string | null
+          rating?: number | null
           status?: string
           tax_number?: string | null
           tax_office?: string | null
@@ -767,6 +828,7 @@ export type Database = {
           partner_code?: string | null
           phone?: string | null
           pv_owner_id?: string | null
+          rating?: number | null
           status?: string
           tax_number?: string | null
           tax_office?: string | null
@@ -1050,6 +1112,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      delete_offer_version: {
+        Args: { p_offer_version_id: string }
+        Returns: undefined
+      }
       find_duplicate_leads_by_phone: {
         Args: { p_phone: string }
         Returns: {
@@ -1060,6 +1126,7 @@ export type Database = {
           stage: string
         }[]
       }
+      health_check: { Args: never; Returns: boolean }
       record_sales_outcome: {
         Args: {
           p_accepted_offer_version_id?: string
@@ -1100,6 +1167,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      release_idempotency_key: { Args: { p_key: string }; Returns: undefined }
       respond_to_referral: {
         Args: {
           p_decision: string

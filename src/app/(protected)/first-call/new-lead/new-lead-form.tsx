@@ -15,6 +15,7 @@ export function NewLeadForm() {
   const [state, formAction, pending] = useActionState(createLead, initialState);
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   function handleConfirmAnyway() {
     setConfirmDuplicate(true);
@@ -24,6 +25,7 @@ export function NewLeadForm() {
   return (
     <form ref={formRef} action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="confirmDuplicate" value={confirmDuplicate ? "true" : "false"} />
+      <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1">

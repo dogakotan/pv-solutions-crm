@@ -1,7 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getVerifiedUserId } from "@/lib/auth/current-user";
+import type { PartnerStatus } from "@/types/partner";
 
 export type CreatePartnerState = {
   error?: string;
@@ -14,35 +17,88 @@ function splitList(value: FormDataEntryValue | null): string[] {
     .filter(Boolean);
 }
 
+const optionalTrimmed = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((v) => v || null)
+    .nullable();
+
+const PARTNER_STATUSES: PartnerStatus[] = ["candidate", "active", "suspended", "inactive"];
+
+const newPartnerSchema = z.object({
+  name: z.string().trim().min(2, "Firma adı en az 2 karakter olmalıdır.").max(200),
+  city: z.string().trim().min(2, "Şehir en az 2 karakter olmalıdır.").max(100),
+  partnerCode: optionalTrimmed(50),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^[0-9+()\s-]{0,20}$/, "Telefon numarası geçersiz.")
+    .transform((v) => v || null)
+    .nullable(),
+  taxNumber: z
+    .string()
+    .trim()
+    .regex(/^(\d{10}|\d{11})?$/, "Vergi numarası 10 veya 11 hane olmalıdır.")
+    .transform((v) => v || null)
+    .nullable(),
+  taxOffice: optionalTrimmed(200),
+  email: z
+    .string()
+    .trim()
+    .refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "E-posta adresi geçersiz.")
+    .transform((v) => v || null)
+    .nullable(),
+  address: optionalTrimmed(500),
+  status: z.enum(PARTNER_STATUSES as [PartnerStatus, ...PartnerStatus[]]).default("candidate"),
+  internalNotes: optionalTrimmed(2000),
+  pvOwnerId: optionalTrimmed(100),
+});
+
 export async function createPartner(
   _prevState: CreatePartnerState,
   formData: FormData
 ): Promise<CreatePartnerState> {
-  const name = String(formData.get("name") ?? "").trim();
-  const city = String(formData.get("city") ?? "").trim();
+  const parsed = newPartnerSchema.safeParse({
+    name: String(formData.get("name") ?? ""),
+    city: String(formData.get("city") ?? ""),
+    partnerCode: String(formData.get("partnerCode") ?? ""),
+    phone: String(formData.get("phone") ?? ""),
+    taxNumber: String(formData.get("taxNumber") ?? ""),
+    taxOffice: String(formData.get("taxOffice") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    address: String(formData.get("address") ?? ""),
+    status: String(formData.get("status") ?? "candidate"),
+    internalNotes: String(formData.get("internalNotes") ?? ""),
+    pvOwnerId: String(formData.get("pvOwnerId") ?? ""),
+  });
 
-  if (!name || !city) {
-    return { error: "Firma adı ve şehir zorunludur." };
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Girilen bilgiler geçersiz." };
   }
 
-  const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    name,
+    city,
+    partnerCode,
+    phone,
+    taxNumber,
+    taxOffice,
+    email,
+    address,
+    status,
+    internalNotes,
+    pvOwnerId,
+  } = parsed.data;
 
-  if (!user) {
+  const userId = await getVerifiedUserId();
+
+  if (!userId) {
     return { error: "Oturum bulunamadı." };
   }
 
-  const partnerCode = String(formData.get("partnerCode") ?? "").trim() || null;
-  const phone = String(formData.get("phone") ?? "").trim() || null;
-  const taxNumber = String(formData.get("taxNumber") ?? "").trim() || null;
-  const taxOffice = String(formData.get("taxOffice") ?? "").trim() || null;
-  const email = String(formData.get("email") ?? "").trim() || null;
-  const address = String(formData.get("address") ?? "").trim() || null;
-  const status = String(formData.get("status") ?? "candidate");
-  const internalNotes = String(formData.get("internalNotes") ?? "").trim() || null;
-  const pvOwnerId = String(formData.get("pvOwnerId") ?? "").trim() || null;
+  const supabase = await createClient();
 
   const serviceRegions = splitList(formData.get("serviceRegions"));
   const capabilities = splitList(formData.get("capabilities"));
@@ -61,7 +117,7 @@ export async function createPartner(
       address,
       status,
       pv_owner_id: pvOwnerId,
-      created_by: user.id,
+      created_by: userId,
     })
     .select("id")
     .single();

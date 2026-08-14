@@ -14,18 +14,27 @@ export type OfferListItem = {
   customerName: string;
 };
 
+export type OfferLineItem = {
+  id: string;
+  productCode: string | null;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+};
+
 export type OfferVersionItem = {
   id: string;
   revisionNo: number;
-  capacityKwp: number;
   amount: number;
   currency: string;
   vatIncluded: boolean;
   validUntil: string | null;
   scopeSummary: string | null;
+  paymentMethod: string | null;
+  shippingTerms: string | null;
   status: OfferVersionStatus;
-  sentAt: string | null;
   createdAt: string;
+  items: OfferLineItem[];
 };
 
 type LeadEmbed =
@@ -61,14 +70,10 @@ export async function getVisibleOffers(supabase: TypedSupabaseClient, limit = 50
   });
 }
 
-export type OfferDetail = OfferListItem & {
-  createdByOrganizationType: "pv" | "partner";
-};
-
-export async function getOfferById(supabase: TypedSupabaseClient, id: string): Promise<OfferDetail | null> {
+export async function getOfferById(supabase: TypedSupabaseClient, id: string): Promise<OfferListItem | null> {
   const { data, error } = await supabase
     .from("offers")
-    .select("id, offer_no, status, created_at, created_by_organization_type, leads(lead_no, customer_name)")
+    .select("id, offer_no, status, created_at, leads(lead_no, customer_name)")
     .eq("id", id)
     .maybeSingle();
 
@@ -85,7 +90,6 @@ export async function getOfferById(supabase: TypedSupabaseClient, id: string): P
     createdAt: data.created_at,
     leadNo: lead.lead_no,
     customerName: lead.customer_name,
-    createdByOrganizationType: data.created_by_organization_type as "pv" | "partner",
   };
 }
 
@@ -93,7 +97,6 @@ export type LeadOfferVersionOption = {
   id: string;
   offerNo: string;
   revisionNo: number;
-  capacityKwp: number;
   amount: number;
   currency: string;
 };
@@ -110,7 +113,7 @@ export async function getOfferVersionsForLead(
 ): Promise<LeadOfferVersionOption[]> {
   const { data, error } = await supabase
     .from("offer_versions")
-    .select("id, revision_no, capacity_kwp, amount, currency, offers!inner(offer_no, lead_id)")
+    .select("id, revision_no, amount, currency, offers!inner(offer_no, lead_id)")
     .eq("offers.lead_id", leadId)
     .order("created_at", { ascending: false });
 
@@ -125,17 +128,50 @@ export async function getOfferVersionsForLead(
       id: row.id,
       offerNo: offer.offer_no,
       revisionNo: row.revision_no,
-      capacityKwp: row.capacity_kwp,
       amount: row.amount,
       currency: row.currency,
     }];
   });
 }
 
+export type LeadOfferHistory = {
+  offerId: string;
+  versions: OfferVersionItem[];
+};
+
+/**
+ * Lead detay sayfasındaki "Teklif Geçmişi" kartı için — bu lead'in
+ * (varsa) tek teklifini ve tüm revizyonlarını döner. Şu an bir lead
+ * için en fazla bir `offers` satırı açılan iş akışı var (revizyonlar
+ * offer_versions'a yeni satır olarak eklenir); birden fazla teklif
+ * açılırsa en eskisi kullanılır.
+ */
+export async function getOfferHistoryForLead(
+  supabase: TypedSupabaseClient,
+  leadId: string
+): Promise<LeadOfferHistory | null> {
+  const { data: offer, error: offerError } = await supabase
+    .from("offers")
+    .select("id")
+    .eq("lead_id", leadId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (offerError) throw offerError;
+  if (!offer) return null;
+
+  const versions = await getOfferVersions(supabase, offer.id);
+
+  return { offerId: offer.id, versions };
+}
+
 export async function getOfferVersions(supabase: TypedSupabaseClient, offerId: string): Promise<OfferVersionItem[]> {
   const { data, error } = await supabase
     .from("offer_versions")
-    .select("id, revision_no, capacity_kwp, amount, currency, vat_included, valid_until, scope_summary, status, sent_at, created_at")
+    .select(
+      "id, revision_no, amount, currency, vat_included, valid_until, scope_summary, payment_method, shipping_terms, status, created_at, offer_version_items(id, product_code, product_name, quantity, unit_price, sort_order)"
+    )
     .eq("offer_id", offerId)
     .order("revision_no", { ascending: false });
 
@@ -144,14 +180,85 @@ export async function getOfferVersions(supabase: TypedSupabaseClient, offerId: s
   return (data ?? []).map((row) => ({
     id: row.id,
     revisionNo: row.revision_no,
-    capacityKwp: row.capacity_kwp,
     amount: row.amount,
     currency: row.currency,
     vatIncluded: row.vat_included,
     validUntil: row.valid_until,
     scopeSummary: row.scope_summary,
+    paymentMethod: row.payment_method,
+    shippingTerms: row.shipping_terms,
     status: row.status as OfferVersionStatus,
-    sentAt: row.sent_at,
     createdAt: row.created_at,
+    items: [...row.offer_version_items]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((item) => ({
+        id: item.id,
+        productCode: item.product_code,
+        productName: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+      })),
   }));
+}
+
+export type OfferVersionForExport = OfferVersionItem & {
+  offerNo: string;
+  customerName: string;
+};
+
+/**
+ * Excel çıktısı için tek bir revizyonun tüm bağlamını (teklif no, müşteri
+ * adı, kalemler) tek sorguda döner — offer_versions'ın kendi RLS'i zaten
+ * görünürlüğü sınırlıyor, burada ek bir yetki kontrolüne gerek yok.
+ */
+export async function getOfferVersionForExport(
+  supabase: TypedSupabaseClient,
+  offerVersionId: string
+): Promise<OfferVersionForExport | null> {
+  const { data, error } = await supabase
+    .from("offer_versions")
+    .select(
+      "id, revision_no, amount, currency, vat_included, valid_until, scope_summary, payment_method, shipping_terms, status, created_at, offer_version_items(id, product_code, product_name, quantity, unit_price, sort_order), offers!inner(offer_no, leads(customer_name))"
+    )
+    .eq("id", offerVersionId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  type OfferEmbed = {
+    offer_no: string;
+    leads: { customer_name: string } | { customer_name: string }[] | null;
+  };
+
+  const offer = Array.isArray(data.offers) ? data.offers[0] : (data.offers as OfferEmbed | null);
+  if (!offer) return null;
+
+  const lead = Array.isArray(offer.leads) ? offer.leads[0] : offer.leads;
+  if (!lead) return null;
+
+  return {
+    id: data.id,
+    revisionNo: data.revision_no,
+    amount: data.amount,
+    currency: data.currency,
+    vatIncluded: data.vat_included,
+    validUntil: data.valid_until,
+    scopeSummary: data.scope_summary,
+    paymentMethod: data.payment_method,
+    shippingTerms: data.shipping_terms,
+    status: data.status as OfferVersionStatus,
+    createdAt: data.created_at,
+    items: [...data.offer_version_items]
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((item) => ({
+        id: item.id,
+        productCode: item.product_code,
+        productName: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+      })),
+    offerNo: offer.offer_no,
+    customerName: lead.customer_name,
+  };
 }

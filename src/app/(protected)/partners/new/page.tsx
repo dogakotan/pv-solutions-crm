@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { BackLink } from "@/components/back-link";
 import { requireRole } from "@/lib/auth/require-role";
 import { getActivePvOwnerOptions } from "@/lib/data/assignments";
 import { NewPartnerForm } from "./new-partner-form";
@@ -11,9 +11,7 @@ export default async function NewPartnerPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/partners" className="text-sm text-muted hover:text-brand">
-        ← Partnerler
-      </Link>
+      <BackLink fallbackHref="/partners" label="Partnerler" />
 
       <h1 className="text-2xl font-semibold text-foreground">Yeni Partner</h1>
 

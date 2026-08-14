@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server";
+import { getVerifiedUserId } from "@/lib/auth/current-user";
 import { AuthCard } from "@/components/auth-card";
 import { ResetPasswordForm } from "./reset-password-form";
 
@@ -17,12 +17,9 @@ export default function ResetPasswordPage() {
 }
 
 async function AuthGate() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const userId = await getVerifiedUserId();
 
-  if (!user) {
+  if (!userId) {
     redirect("/login?error=invalid_reset_link");
   }
 

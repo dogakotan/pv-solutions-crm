@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import {
   getLeadsNeedingSalesAssignment,
@@ -6,18 +7,10 @@ import {
   getActivePartners,
 } from "@/lib/data/assignments";
 import { LeadStageBadge } from "@/components/lead-badges";
+import { TableSkeleton } from "@/components/skeletons";
 import { assignToSales, assignToPartner } from "./actions";
 
-export default async function AdminAssignmentsPage() {
-  const supabase = await createClient();
-
-  const [salesQueue, partnerQueue, salesUsers, partners] = await Promise.all([
-    getLeadsNeedingSalesAssignment(supabase),
-    getLeadsNeedingPartnerAssignment(supabase),
-    getActiveSalesUsers(supabase),
-    getActivePartners(supabase),
-  ]);
-
+export default function AdminAssignmentsPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
@@ -28,12 +21,31 @@ export default async function AdminAssignmentsPage() {
         </p>
       </div>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-foreground">
-          Satış Çalışanına Atama Bekleyen Leadler ({salesQueue.length})
-        </h2>
+      <Suspense fallback={<TableSkeleton rows={4} />}>
+        <SalesAssignmentQueue />
+      </Suspense>
 
-        {salesQueue.length === 0 ? (
+      <Suspense fallback={<TableSkeleton rows={4} />}>
+        <PartnerAssignmentQueue />
+      </Suspense>
+    </div>
+  );
+}
+
+async function SalesAssignmentQueue() {
+  const supabase = await createClient();
+  const [salesQueue, salesUsers] = await Promise.all([
+    getLeadsNeedingSalesAssignment(supabase),
+    getActiveSalesUsers(supabase),
+  ]);
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-sm font-medium text-foreground">
+        Satış Çalışanına Atama Bekleyen Leadler ({salesQueue.length})
+      </h2>
+
+      {salesQueue.length === 0 ? (
           <div className="rounded-2xl border border-card-border bg-card p-8 text-center text-sm text-muted shadow-sm">
             Satışa atama bekleyen lead yok.
           </div>
@@ -90,8 +102,18 @@ export default async function AdminAssignmentsPage() {
             </table>
           </div>
         )}
-      </section>
+    </section>
+  );
+}
 
+async function PartnerAssignmentQueue() {
+  const supabase = await createClient();
+  const [partnerQueue, partners] = await Promise.all([
+    getLeadsNeedingPartnerAssignment(supabase),
+    getActivePartners(supabase),
+  ]);
+
+  return (
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-foreground">
           Partnere Atama Bekleyen Leadler ({partnerQueue.length})
@@ -155,6 +177,5 @@ export default async function AdminAssignmentsPage() {
           </div>
         )}
       </section>
-    </div>
   );
 }

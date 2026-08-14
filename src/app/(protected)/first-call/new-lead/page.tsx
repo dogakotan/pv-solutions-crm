@@ -1,12 +1,10 @@
-import Link from "next/link";
+import { BackLink } from "@/components/back-link";
 import { NewLeadForm } from "./new-lead-form";
 
 export default function NewLeadPage() {
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/first-call/lead-pool" className="text-sm text-muted hover:text-brand">
-        ← Lead Havuzu
-      </Link>
+      <BackLink fallbackHref="/first-call/lead-pool" label="Lead Havuzu" />
 
       <h1 className="text-2xl font-semibold text-foreground">Yeni Lead</h1>
 

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getVisibleLeads } from "@/lib/data/leads";
@@ -17,7 +18,36 @@ const COLUMNS: { stage: LeadStage; label: string; next: LeadStage | null }[] = [
   { stage: "lost", label: "Kaybedildi", next: null },
 ];
 
-export default async function SalesPipelinePage() {
+export default function SalesPipelinePage() {
+  return (
+    <div className="flex flex-col gap-6">
+      <h1 className="text-2xl font-semibold text-foreground">Satış Pipeline</h1>
+
+      <Suspense fallback={<PipelineSkeleton />}>
+        <PipelineBoard />
+      </Suspense>
+    </div>
+  );
+}
+
+function PipelineSkeleton() {
+  return (
+    <div className="flex gap-4 overflow-x-auto pb-2">
+      {COLUMNS.map((column) => (
+        <div key={column.stage} className="flex w-72 shrink-0 flex-col gap-3">
+          <div className="h-5 w-32 animate-pulse rounded bg-card" />
+          <div className="flex flex-col gap-2">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div key={index} className="h-16 animate-pulse rounded-xl border border-card-border bg-card" />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+async function PipelineBoard() {
   const supabase = await createClient();
   const leads = await getVisibleLeads(supabase, 200);
 
@@ -29,9 +59,6 @@ export default async function SalesPipelinePage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Satış Pipeline</h1>
-
       <div className="flex gap-4 overflow-x-auto pb-2">
         {COLUMNS.map((column) => {
           const columnLeads = leadsByStage.get(column.stage) ?? [];
@@ -80,6 +107,5 @@ export default async function SalesPipelinePage() {
           );
         })}
       </div>
-    </div>
   );
 }

@@ -1,9 +1,12 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { BackLink } from "@/components/back-link";
+import { CardSkeleton } from "@/components/skeletons";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/require-role";
 import { getPartnerById, getPartnerEmployees, getPartnerInternalNote } from "@/lib/data/partners";
 import { getSalesOutcomesForPartner } from "@/lib/data/sales-outcomes";
+import type { Partner } from "@/types/partner";
 import { PartnerStatusBadge } from "../partner-status-badge";
 import { PartnerDetailTabs } from "./partner-detail-tabs";
 import { PARTNER_TABS, type PartnerTabKey } from "./partner-tabs";
@@ -20,12 +23,7 @@ export default async function PartnerDetailPage({
   const supabase = await createClient();
 
   const { id } = await params;
-  const [partner, employees, salesOutcomes, internalNote] = await Promise.all([
-    getPartnerById(supabase, id),
-    getPartnerEmployees(supabase, id),
-    getSalesOutcomesForPartner(supabase, id),
-    getPartnerInternalNote(supabase, id),
-  ]);
+  const partner = await getPartnerById(supabase, id);
 
   if (!partner) {
     notFound();
@@ -38,9 +36,7 @@ export default async function PartnerDetailPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <Link href="/partners" className="text-sm text-muted hover:text-brand">
-        ← Partnerler
-      </Link>
+      <BackLink fallbackHref="/partners" label="Partnerler" />
 
       <div className="flex items-center justify-between">
         <div>
@@ -50,14 +46,37 @@ export default async function PartnerDetailPage({
         <PartnerStatusBadge status={partner.status} />
       </div>
 
-      <PartnerDetailTabs
-        partner={partner}
-        employees={employees}
-        salesOutcomes={salesOutcomes}
-        internalNote={internalNote}
-        initialTab={initialTab}
-        infoTab={<PartnerInfoTab partner={partner} />}
-      />
+      <Suspense fallback={<CardSkeleton lines={6} />}>
+        <PartnerDetailTabsSection partner={partner} partnerId={id} initialTab={initialTab} />
+      </Suspense>
     </div>
+  );
+}
+
+async function PartnerDetailTabsSection({
+  partner,
+  partnerId,
+  initialTab,
+}: {
+  partner: Partner;
+  partnerId: string;
+  initialTab: PartnerTabKey;
+}) {
+  const supabase = await createClient();
+  const [employees, salesOutcomes, internalNote] = await Promise.all([
+    getPartnerEmployees(supabase, partnerId),
+    getSalesOutcomesForPartner(supabase, partnerId),
+    getPartnerInternalNote(supabase, partnerId),
+  ]);
+
+  return (
+    <PartnerDetailTabs
+      partner={partner}
+      employees={employees}
+      salesOutcomes={salesOutcomes}
+      internalNote={internalNote}
+      initialTab={initialTab}
+      infoTab={<PartnerInfoTab partner={partner} />}
+    />
   );
 }

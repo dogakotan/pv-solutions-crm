@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getVerifiedUserId } from "@/lib/auth/current-user";
 
 export type ResetPasswordState = {
   error?: string;
@@ -22,16 +23,13 @@ export async function updatePassword(
     return { error: "Şifreler eşleşmiyor." };
   }
 
-  const supabase = await createClient();
+  const userId = await getVerifiedUserId();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  if (!userId) {
     return { error: "Oturum bulunamadı. Lütfen sıfırlama bağlantısını yeniden isteyin." };
   }
 
+  const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {

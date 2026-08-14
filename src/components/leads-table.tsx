@@ -66,7 +66,7 @@ export function LeadsTable({
             setStageFilter(event.target.value as LeadStage | "all");
             setPage(1);
           }}
-          className={`${inputClass} sm:w-56`}
+          className={`${inputClass} sm:ml-auto sm:w-56`}
         >
           <option value="all">Tüm aşamalar</option>
           {Object.entries(STAGE_STYLES).map(([stage, { label }]) => (
@@ -91,7 +91,7 @@ export function LeadsTable({
                   <th className="px-4 py-3">Müşteri</th>
                   <th className="px-4 py-3">Şehir</th>
                   <th className="px-4 py-3">Aşama</th>
-                  <th className="px-4 py-3">Puan</th>
+                  <th className="px-4 py-3">Durum</th>
                   <th className="px-4 py-3">Sonraki Takip</th>
                 </tr>
               </thead>

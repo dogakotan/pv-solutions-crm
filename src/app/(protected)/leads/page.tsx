@@ -1,14 +1,10 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { requireRole, getCurrentUserRole } from "@/lib/auth/require-role";
 import { getDefaultRouteForRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
-import {
-  getFirstCallLeadKpis,
-  getSalesLeadKpis,
-  getPartnerReferralKpis,
-  getVisibleLeads,
-  getVisiblePartnerReferrals,
-} from "@/lib/data/leads";
+import { getSalesLeadKpis, getVisibleLeads } from "@/lib/data/leads";
+import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { LeadsOverviewTabs } from "./leads-overview-tabs";
 
 /**
@@ -25,27 +21,31 @@ export default async function LeadsPage() {
   }
 
   await requireRole(["admin"]);
-  const supabase = await createClient();
-
-  const [firstCallKpis, salesKpis, referralKpis, leads, referrals] = await Promise.all([
-    getFirstCallLeadKpis(supabase),
-    getSalesLeadKpis(supabase),
-    getPartnerReferralKpis(supabase),
-    getVisibleLeads(supabase, 200),
-    getVisiblePartnerReferrals(supabase),
-  ]);
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-foreground">Leadler</h1>
 
-      <LeadsOverviewTabs
-        firstCallKpis={firstCallKpis}
-        salesKpis={salesKpis}
-        referralKpis={referralKpis}
-        leads={leads}
-        referrals={referrals}
-      />
+      <Suspense
+        fallback={
+          <div className="flex flex-col gap-6">
+            <KpiGridSkeleton count={2} className="grid grid-cols-1 gap-4 sm:grid-cols-2" />
+            <TableSkeleton rows={8} />
+          </div>
+        }
+      >
+        <LeadsOverviewContent />
+      </Suspense>
     </div>
   );
+}
+
+async function LeadsOverviewContent() {
+  const supabase = await createClient();
+  const [salesKpis, leads] = await Promise.all([
+    getSalesLeadKpis(supabase),
+    getVisibleLeads(supabase, 200),
+  ]);
+
+  return <LeadsOverviewTabs salesKpis={salesKpis} leads={leads} />;
 }

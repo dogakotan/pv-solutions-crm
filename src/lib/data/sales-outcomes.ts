@@ -11,7 +11,6 @@ export type SalesOutcomeItem = {
   finalAmount: number | null;
   currency: string | null;
   lostReason: string | null;
-  lostReasonDetail: string | null;
   resultDate: string;
   notes: string | null;
   offerNo: string | null;
@@ -37,7 +36,7 @@ export async function getSalesOutcomeForLead(
   const { data, error } = await supabase
     .from("sales_outcomes")
     .select(
-      "id, outcome, final_amount, currency, lost_reason, lost_reason_detail, result_date, notes, accepted_offer_version:offer_versions(revision_no, offers(offer_no))"
+      "id, outcome, final_amount, currency, lost_reason, result_date, notes, accepted_offer_version:offer_versions(revision_no, offers(offer_no))"
     )
     .eq("lead_id", leadId)
     .maybeSingle();
@@ -53,7 +52,6 @@ export async function getSalesOutcomeForLead(
     finalAmount: data.final_amount,
     currency: data.currency,
     lostReason: data.lost_reason,
-    lostReasonDetail: data.lost_reason_detail,
     resultDate: data.result_date,
     notes: data.notes,
     offerNo,

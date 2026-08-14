@@ -34,6 +34,7 @@ export function PartnerInfoTab({ partner }: { partner: Partner }) {
         <Field label="Yetkinlikler" value={partner.capabilities.join(", ")} />
         <Field label="Uygulama Alanı" value={partner.applicationAreas.join(", ") || "—"} />
         <Field label="PV Sorumlusu" value={partner.pvOwnerName} />
+        <Field label="Puan" value={partner.rating != null ? `${partner.rating.toFixed(1)}/5` : "—"} />
         <Field label="Oluşturulma Tarihi" value={partner.createdAt} />
       </dl>
 

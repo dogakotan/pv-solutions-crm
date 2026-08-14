@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { Suspense } from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { Logo } from "@/components/logo";
 import { SidebarNav } from "@/components/sidebar-nav";
+import { SidebarProvider, SidebarFrame, MobileMenuButton } from "@/components/sidebar-shell";
 import { getCurrentUserRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import { getUnreadNotificationCount } from "@/lib/data/notifications";
@@ -16,31 +16,49 @@ import { logout } from "./actions";
  * stream olur. Önceki halde (async layout, üstte await) tüm sayfa —solda
  * dahil— auth zinciri bitene kadar boş kalıyordu; bu, "sayfa geçişi
  * yavaş" şikayetinin asıl nedeniydi.
+ *
+ * Sidebar artık mobilde (lg altı) açılır/kapanır bir overlay drawer,
+ * masaüstünde de ikon-rayına daraltılabilir — açık/kapalı ve daraltılmış
+ * durumu SidebarProvider (client context) header ile aside arasında
+ * paylaşıyor, bkz. components/sidebar-shell.tsx.
+ *
+ * `instant = false`: bu layout'un header'ı (bildirim sayısı, oturum
+ * açan kullanıcı) kullanıcıya özel, cookie'ye bağlı veri okuyor — bu
+ * veri paylaşılan/statik bir "instant" kabuğun parçası olamaz ve
+ * olmamalı (her kullanıcı için farklı, önbelleklenmemeli). Dıştan bu
+ * layout'a giren navigasyonlar bu yüzden bloklanmaya izinli; layout
+ * zaten mount olduktan sonraki korumalı sayfalar-arası geçişler
+ * (layout yeniden render olmadığından) instant doğrulamasından ayrıca
+ * etkilenmiyor. Bkz. node_modules/next/dist/docs/.../instant-navigation.md.
  */
+export const instant = false;
+
 export default function ProtectedLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-card-border bg-card px-4 py-6">
-        <div className="px-2">
-          <Logo />
-        </div>
-        <Suspense fallback={<SidebarNavSkeleton />}>
-          <SidebarNavSection />
-        </Suspense>
-      </aside>
+    <SidebarProvider>
+      <div className="flex min-h-screen bg-background">
+        <SidebarFrame>
+          <Suspense fallback={<SidebarNavSkeleton />}>
+            <SidebarNavSection />
+          </Suspense>
+        </SidebarFrame>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-end gap-4 border-b border-card-border bg-card px-6 py-4">
-          <Suspense fallback={<NotificationBellSkeleton />}>
-            <NotificationBell />
-          </Suspense>
-          <Suspense fallback={<HeaderUserSkeleton />}>
-            <HeaderUser />
-          </Suspense>
-        </header>
-        <main className="min-w-0 flex-1 p-6">{children}</main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="flex items-center justify-between gap-4 border-b border-card-border bg-card px-4 py-4 sm:px-6 lg:justify-end">
+            <MobileMenuButton />
+            <div className="flex items-center gap-4">
+              <Suspense fallback={<NotificationBellSkeleton />}>
+                <NotificationBell />
+              </Suspense>
+              <Suspense fallback={<HeaderUserSkeleton />}>
+                <HeaderUser />
+              </Suspense>
+            </div>
+          </header>
+          <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }
 
@@ -62,14 +80,14 @@ function SidebarNavSkeleton() {
 async function HeaderUser() {
   const { profile } = await getCurrentUserRole();
   return (
-    <div className="flex items-center gap-4 text-sm">
-      <span className="font-medium text-foreground">
+    <div className="flex items-center gap-2 text-sm sm:gap-4">
+      <span className="hidden max-w-[10rem] truncate font-medium text-foreground sm:inline">
         {profile.full_name || profile.email}
       </span>
       <form action={logout}>
         <button
           type="submit"
-          className="rounded-lg border border-card-border px-3 py-1.5 hover:bg-background"
+          className="whitespace-nowrap rounded-lg border border-card-border px-3 py-1.5 hover:bg-background"
         >
           Çıkış yap
         </button>

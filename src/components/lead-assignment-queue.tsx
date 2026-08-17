@@ -1,18 +1,28 @@
-import { LeadStageBadge } from "@/components/lead-badges";
-import type { AssignableLead, ActiveUserOption } from "@/lib/data/assignments";
+import Link from "next/link";
+import { LeadStageBadge, LeadScoreBadge } from "@/components/lead-badges";
+import type { AssignableLead } from "@/lib/data/assignments";
 
-export function SalesAssignmentQueue({
+export type AssigneeOption = {
+  id: string;
+  label: string;
+};
+
+export function LeadAssignmentQueue({
   leads,
-  salesUsers,
+  assignees,
   assignAction,
-  title = "Satış Çalışanına Atama Bekleyen Leadler",
-  emptyMessage = "Satışa atama bekleyen lead yok.",
+  selectName,
+  selectPlaceholder,
+  title,
+  emptyMessage,
 }: {
   leads: AssignableLead[];
-  salesUsers: ActiveUserOption[];
+  assignees: AssigneeOption[];
   assignAction: (formData: FormData) => Promise<void>;
-  title?: string;
-  emptyMessage?: string;
+  selectName: string;
+  selectPlaceholder: string;
+  title: string;
+  emptyMessage: string;
 }) {
   return (
     <section className="flex flex-col gap-3">
@@ -32,6 +42,7 @@ export function SalesAssignmentQueue({
                 <th className="px-4 py-3">Lead No</th>
                 <th className="px-4 py-3">Müşteri</th>
                 <th className="px-4 py-3">Şehir</th>
+                <th className="px-4 py-3">Puan</th>
                 <th className="px-4 py-3">Aşama</th>
                 <th className="px-4 py-3">Ata</th>
               </tr>
@@ -39,9 +50,20 @@ export function SalesAssignmentQueue({
             <tbody>
               {leads.map((lead) => (
                 <tr key={lead.id} className="border-b border-card-border last:border-0">
-                  <td className="px-4 py-3 font-medium text-foreground">{lead.leadNo}</td>
-                  <td className="px-4 py-3 text-foreground">{lead.customerName}</td>
+                  <td className="px-4 py-3">
+                    <Link href={`/leads/${lead.id}`} className="font-medium text-brand hover:underline">
+                      {lead.leadNo}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3 text-foreground">
+                    <Link href={`/leads/${lead.id}`} className="hover:underline">
+                      {lead.customerName}
+                    </Link>
+                  </td>
                   <td className="px-4 py-3 text-muted">{lead.city}</td>
+                  <td className="px-4 py-3">
+                    <LeadScoreBadge score={lead.leadScore} />
+                  </td>
                   <td className="px-4 py-3">
                     <LeadStageBadge stage={lead.stage} />
                   </td>
@@ -49,17 +71,17 @@ export function SalesAssignmentQueue({
                     <form action={assignAction} className="flex items-center gap-2">
                       <input type="hidden" name="leadId" value={lead.id} />
                       <select
-                        name="salesUserId"
+                        name={selectName}
                         defaultValue=""
                         required
                         className="rounded-lg border border-card-border px-2 py-1 text-sm"
                       >
                         <option value="" disabled>
-                          Satış çalışanı seç
+                          {selectPlaceholder}
                         </option>
-                        {salesUsers.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.fullName}
+                        {assignees.map((assignee) => (
+                          <option key={assignee.id} value={assignee.id}>
+                            {assignee.label}
                           </option>
                         ))}
                       </select>

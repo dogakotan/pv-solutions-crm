@@ -54,6 +54,8 @@ export type LeadDetail = {
   id: string;
   leadNo: string;
   customerName: string;
+  alternatePhone: string | null;
+  email: string | null;
   city: string;
   district: string | null;
   address: string | null;
@@ -64,6 +66,8 @@ export type LeadDetail = {
   heatPumpInterest: string | null;
   evInterest: string | null;
   batteryInterest: string | null;
+  competitorOfferStatus: string | null;
+  competitorOfferNote: string | null;
   stage: LeadStage;
   leadScore: LeadScore | null;
   nextFollowUpAt: string | null;
@@ -80,9 +84,10 @@ function extractName(embed: NameEmbed): string | null {
 }
 
 const LEAD_DETAIL_SELECT = `
-  id, lead_no, customer_name,
+  id, lead_no, customer_name, alternate_phone, email,
   city, district, address, building_type, roof_area_m2, estimated_capacity_kwp,
   pool_interest, heat_pump_interest, ev_interest, battery_interest,
+  competitor_offer_status, competitor_offer_note,
   stage, lead_score, next_follow_up_at, general_notes,
   owner:profiles!leads_owner_id_fkey(full_name)
 `;
@@ -102,6 +107,8 @@ export async function getLeadById(supabase: TypedSupabaseClient, id: string): Pr
     id: data.id,
     leadNo: data.lead_no ?? "",
     customerName: data.customer_name,
+    alternatePhone: data.alternate_phone,
+    email: data.email,
     city: data.city,
     district: data.district,
     address: data.address,
@@ -112,6 +119,8 @@ export async function getLeadById(supabase: TypedSupabaseClient, id: string): Pr
     heatPumpInterest: data.heat_pump_interest,
     evInterest: data.ev_interest,
     batteryInterest: data.battery_interest,
+    competitorOfferStatus: data.competitor_offer_status,
+    competitorOfferNote: data.competitor_offer_note,
     stage: data.stage as LeadStage,
     leadScore: data.lead_score as LeadScore | null,
     nextFollowUpAt: data.next_follow_up_at,

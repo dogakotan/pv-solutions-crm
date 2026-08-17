@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
-import type { LeadStage } from "@/types/lead";
+import type { LeadStage, LeadScore } from "@/types/lead";
 
 type TypedSupabaseClient = SupabaseClient<Database>;
 
@@ -11,6 +11,7 @@ export type AssignableLead = {
   customerName: string;
   city: string;
   stage: LeadStage;
+  leadScore: LeadScore | null;
 };
 
 export type ActiveUserOption = {
@@ -29,7 +30,7 @@ export async function getLeadsNeedingSalesAssignment(
 ): Promise<AssignableLead[]> {
   const { data, error } = await supabase
     .from("leads")
-    .select("id, lead_no, customer_name, city, stage")
+    .select("id, lead_no, customer_name, city, stage, lead_score")
     .is("sales_user_id", null)
     .is("deleted_at", null)
     .order("created_at", { ascending: true })
@@ -43,6 +44,7 @@ export async function getLeadsNeedingSalesAssignment(
     customerName: row.customer_name,
     city: row.city,
     stage: row.stage as LeadStage,
+    leadScore: row.lead_score as LeadScore | null,
   }));
 }
 
@@ -52,7 +54,7 @@ export async function getLeadsNeedingPartnerAssignment(
 ): Promise<AssignableLead[]> {
   const { data: candidates, error } = await supabase
     .from("leads")
-    .select("id, lead_no, customer_name, city, stage")
+    .select("id, lead_no, customer_name, city, stage, lead_score")
     .not("sales_user_id", "is", null)
     .is("deleted_at", null)
     .order("created_at", { ascending: true })
@@ -79,6 +81,7 @@ export async function getLeadsNeedingPartnerAssignment(
       customerName: row.customer_name,
       city: row.city,
       stage: row.stage as LeadStage,
+      leadScore: row.lead_score as LeadScore | null,
     }));
 }
 

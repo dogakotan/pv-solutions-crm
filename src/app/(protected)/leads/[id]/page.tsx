@@ -22,13 +22,13 @@ import { OfferVersionRow } from "@/components/offer-version-row";
 import { ActivityForm } from "./activity-form";
 import { SalesOutcomeForm } from "./sales-outcome-form";
 import { OfferForm } from "./offer-form";
+import { QualificationForm } from "./qualification-form";
 import { assignPartner, deleteOfferVersion } from "./actions";
+import { INTEREST_OPTIONS } from "@/components/lead-qualification-fields";
 
-const INTEREST_LABELS: Record<string, string> = {
-  yes: "Evet",
-  no: "Hayır",
-  considering: "Değerlendiriyor",
-};
+const INTEREST_LABELS: Record<string, string> = Object.fromEntries(
+  INTEREST_OPTIONS.filter((option) => option.value).map((option) => [option.value, option.label])
+);
 
 function interestLabel(value: string | null): string {
   if (!value) return "—";
@@ -58,6 +58,11 @@ export default async function LeadDetailPage({
   // sahibi pv_sales'i kabul ediyor — first_call için ne aktif atama
   // sorgulamaya ne de öneri listesine gerek var.
   const canAssignPartner = appRole === "admin" || appRole === "sales";
+
+  // Nitelendirme alanlarını (puan, ilgi, teknik detay) yalnızca lead'i
+  // arayan first_call ve pv_admin düzenleyebilir — sales için salt-okunur
+  // "Teknik Detaylar" kartı gösterilir.
+  const canQualifyLead = appRole === "first_call" || appRole === "admin";
 
   const supabase = await createClient();
 
@@ -140,52 +145,59 @@ export default async function LeadDetailPage({
           </Suspense>
         )}
 
-        <div className={CARD_CLASS}>
-          <h2 className="mb-4 text-sm font-medium text-foreground">Teknik Detaylar</h2>
-          <dl className="flex flex-col gap-3 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Bina Tipi</dt>
-              <dd className="text-foreground">{lead.buildingType ?? "—"}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Çatı Alanı</dt>
-              <dd className="text-foreground">{lead.roofAreaM2 ? `${lead.roofAreaM2} m²` : "—"}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Tahmini Kapasite</dt>
-              <dd className="text-foreground">
-                {lead.estimatedCapacityKwp ? `${lead.estimatedCapacityKwp} kWp` : "—"}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Havuz İlgisi</dt>
-              <dd className="text-foreground">{interestLabel(lead.poolInterest)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Isı Pompası İlgisi</dt>
-              <dd className="text-foreground">{interestLabel(lead.heatPumpInterest)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Elektrikli Araç İlgisi</dt>
-              <dd className="text-foreground">{interestLabel(lead.evInterest)}</dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-muted">Batarya İlgisi</dt>
-              <dd className="text-foreground">{interestLabel(lead.batteryInterest)}</dd>
-            </div>
-          </dl>
-        </div>
+        {canQualifyLead ? (
+          <div className={CARD_CLASS}>
+            <h2 className="mb-4 text-sm font-medium text-foreground">Görüşme Sonucu</h2>
+            <QualificationForm key={JSON.stringify(lead)} lead={lead} />
+          </div>
+        ) : (
+          <div className={CARD_CLASS}>
+            <h2 className="mb-4 text-sm font-medium text-foreground">Teknik Detaylar</h2>
+            <dl className="flex flex-col gap-3 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">Bina Tipi</dt>
+                <dd className="text-foreground">{lead.buildingType ?? "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">Çatı Alanı</dt>
+                <dd className="text-foreground">{lead.roofAreaM2 ? `${lead.roofAreaM2} m²` : "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">Tahmini Kapasite</dt>
+                <dd className="text-foreground">
+                  {lead.estimatedCapacityKwp ? `${lead.estimatedCapacityKwp} kWp` : "—"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">Havuz İlgisi</dt>
+                <dd className="text-foreground">{interestLabel(lead.poolInterest)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">Isı Pompası İlgisi</dt>
+                <dd className="text-foreground">{interestLabel(lead.heatPumpInterest)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">Elektrikli Araç İlgisi</dt>
+                <dd className="text-foreground">{interestLabel(lead.evInterest)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">Batarya İlgisi</dt>
+                <dd className="text-foreground">{interestLabel(lead.batteryInterest)}</dd>
+              </div>
+            </dl>
+          </div>
+        )}
 
         <Suspense fallback={<CardSkeleton lines={3} />}>
           <TeklifGecmisiCard leadId={lead.id} canManageOffers={canManageOffers} />
         </Suspense>
       </div>
 
-      {(lead.generalNotes || internalNote) && (
+      {((lead.generalNotes && !canQualifyLead) || internalNote) && (
         <div className={CARD_CLASS}>
           <h2 className="mb-4 text-sm font-medium text-foreground">Notlar</h2>
           <div className="flex flex-col gap-4 text-sm">
-            {lead.generalNotes && (
+            {lead.generalNotes && !canQualifyLead && (
               <div>
                 <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">Genel Not</p>
                 <p className="text-foreground">{lead.generalNotes}</p>

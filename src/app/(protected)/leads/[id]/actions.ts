@@ -5,6 +5,14 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getVerifiedUserId } from "@/lib/auth/current-user";
 import type { ActivityType } from "@/types/activity";
+import {
+  INTEREST_VALUES,
+  COMPETITOR_STATUS_VALUES,
+  LEAD_SCORE_VALUES,
+  optionalText,
+  optionalNumber,
+  optionalEnum,
+} from "@/lib/validation/lead-qualification";
 
 export type CreateActivityState = {
   error?: string;
@@ -95,6 +103,107 @@ export async function createActivity(
   }
 
   revalidatePath(`/leads/${leadId}`);
+  return {};
+}
+
+export type QualifyLeadState = {
+  error?: string;
+};
+
+const qualifyLeadSchema = z.object({
+  leadId: z.string().trim().min(1, "Lead bulunamadı."),
+  leadScore: optionalEnum(LEAD_SCORE_VALUES, null),
+  district: optionalText(200, null),
+  address: optionalText(500, null),
+  alternatePhone: optionalText(50, null),
+  email: optionalText(200, null),
+  buildingType: optionalText(100, null),
+  roofAreaM2: optionalNumber(null),
+  estimatedCapacityKwp: optionalNumber(null),
+  poolInterest: optionalEnum(INTEREST_VALUES, null),
+  heatPumpInterest: optionalEnum(INTEREST_VALUES, null),
+  evInterest: optionalEnum(INTEREST_VALUES, null),
+  batteryInterest: optionalEnum(INTEREST_VALUES, null),
+  competitorOfferStatus: optionalEnum(COMPETITOR_STATUS_VALUES, null),
+  competitorOfferNote: optionalText(2000, null),
+  generalNotes: optionalText(2000, null),
+});
+
+/**
+ * lead_score ve nitelendirme alanları (ilgi, teknik detay, rakip teklifi vb.)
+ * korumalı kolon değil (bkz. lead_protected_columns_and_assignment_rpc) —
+ * leads_update_pv RLS'i first_call'ın kendi lead'ini (created_by/first_call_user_id)
+ * doğrudan update etmesine zaten izin veriyor, bu yüzden ayrı bir RPC gerekmiyor.
+ */
+export async function qualifyLead(
+  _prevState: QualifyLeadState,
+  formData: FormData
+): Promise<QualifyLeadState> {
+  const parsed = qualifyLeadSchema.safeParse({
+    leadId: String(formData.get("leadId") ?? ""),
+    leadScore: String(formData.get("leadScore") ?? ""),
+    district: String(formData.get("district") ?? ""),
+    address: String(formData.get("address") ?? ""),
+    alternatePhone: String(formData.get("alternatePhone") ?? ""),
+    email: String(formData.get("email") ?? ""),
+    buildingType: String(formData.get("buildingType") ?? ""),
+    roofAreaM2: String(formData.get("roofAreaM2") ?? ""),
+    estimatedCapacityKwp: String(formData.get("estimatedCapacityKwp") ?? ""),
+    poolInterest: String(formData.get("poolInterest") ?? ""),
+    heatPumpInterest: String(formData.get("heatPumpInterest") ?? ""),
+    evInterest: String(formData.get("evInterest") ?? ""),
+    batteryInterest: String(formData.get("batteryInterest") ?? ""),
+    competitorOfferStatus: String(formData.get("competitorOfferStatus") ?? ""),
+    competitorOfferNote: String(formData.get("competitorOfferNote") ?? ""),
+    generalNotes: String(formData.get("generalNotes") ?? ""),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Girilen bilgiler geçersiz." };
+  }
+
+  const { leadId, ...fields } = parsed.data;
+
+  const supabase = await createClient();
+
+  const { data: currentLead, error: fetchError } = await supabase
+    .from("leads")
+    .select("stage")
+    .eq("id", leadId)
+    .maybeSingle();
+
+  if (fetchError || !currentLead) {
+    return { error: "Lead bulunamadı." };
+  }
+
+  const { error } = await supabase
+    .from("leads")
+    .update({
+      lead_score: fields.leadScore,
+      district: fields.district,
+      address: fields.address,
+      alternate_phone: fields.alternatePhone,
+      email: fields.email,
+      building_type: fields.buildingType,
+      roof_area_m2: fields.roofAreaM2,
+      estimated_capacity_kwp: fields.estimatedCapacityKwp,
+      pool_interest: fields.poolInterest,
+      heat_pump_interest: fields.heatPumpInterest,
+      ev_interest: fields.evInterest,
+      battery_interest: fields.batteryInterest,
+      competitor_offer_status: fields.competitorOfferStatus,
+      competitor_offer_note: fields.competitorOfferNote,
+      general_notes: fields.generalNotes,
+      ...(currentLead.stage === "new" ? { stage: "contacted" } : {}),
+    })
+    .eq("id", leadId);
+
+  if (error) {
+    return { error: "Görüşme sonucu kaydedilemedi: " + error.message };
+  }
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/first-call/lead-pool");
   return {};
 }
 

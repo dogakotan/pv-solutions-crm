@@ -5,11 +5,14 @@ import Link from "next/link";
 import { createLead, type NewLeadState } from "./actions";
 import { LeadStageBadge } from "@/components/lead-badges";
 import type { LeadStage } from "@/types/lead";
+import {
+  inputClass,
+  SCORE_OPTIONS,
+  COMPETITOR_OPTIONS,
+  InterestField,
+} from "@/components/lead-qualification-fields";
 
 const initialState: NewLeadState = {};
-
-const inputClass =
-  "rounded-lg border border-card-border px-3 py-2 outline-none focus:border-brand focus:ring-1 focus:ring-brand";
 
 export function NewLeadForm() {
   const [state, formAction, pending] = useActionState(createLead, initialState);
@@ -27,7 +30,7 @@ export function NewLeadForm() {
       <input type="hidden" name="confirmDuplicate" value={confirmDuplicate ? "true" : "false"} />
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-foreground">Müşteri tipi</label>
           <select name="customerType" defaultValue="individual" className={inputClass}>
@@ -52,9 +55,81 @@ export function NewLeadForm() {
           <label className="text-sm font-medium text-foreground">Şehir</label>
           <input name="city" required className={inputClass} />
         </div>
-        <div className="flex flex-col gap-1 sm:col-span-2">
+        <div className="flex flex-col gap-1 lg:col-span-2">
           <label className="text-sm font-medium text-foreground">Kaynak</label>
           <input name="source" required placeholder="Web formu, referans, reklam..." className={inputClass} />
+        </div>
+      </div>
+
+      <div className="border-t border-card-border pt-4">
+        <p className="mb-3 text-sm font-medium text-foreground">Görüşme Detayları (opsiyonel)</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Durum (Puan)</label>
+            <select name="leadScore" defaultValue="" className={inputClass}>
+              {SCORE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Bina Tipi</label>
+            <input name="buildingType" placeholder="Müstakil, apartman, işyeri..." className={inputClass} />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Semt / İlçe</label>
+            <input name="district" className={inputClass} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Açık Adres</label>
+            <input name="address" className={inputClass} />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Alternatif Telefon</label>
+            <input name="alternatePhone" className={inputClass} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">E-posta</label>
+            <input type="email" name="email" className={inputClass} />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Çatı Alanı (m²)</label>
+            <input type="number" step="0.01" name="roofAreaM2" className={inputClass} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Tahmini Kapasite (kWp)</label>
+            <input type="number" step="0.01" name="estimatedCapacityKwp" className={inputClass} />
+          </div>
+
+          <InterestField name="heatPumpInterest" label="Isı Pompası İlgisi" />
+          <InterestField name="poolInterest" label="Havuz İlgisi" />
+          <InterestField name="evInterest" label="Elektrikli Araç İlgisi" />
+          <InterestField name="batteryInterest" label="Batarya İlgisi" />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Rakip Teklifi</label>
+            <select name="competitorOfferStatus" defaultValue="" className={inputClass}>
+              {COMPETITOR_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Rakip Teklifi Notu</label>
+            <input name="competitorOfferNote" className={inputClass} />
+          </div>
+
+          <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-3">
+            <label className="text-sm font-medium text-foreground">Genel Not</label>
+            <textarea name="generalNotes" rows={3} className={inputClass} />
+          </div>
         </div>
       </div>
 

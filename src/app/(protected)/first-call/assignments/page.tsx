@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getLeadsNeedingSalesAssignment, getActiveSalesUsers } from "@/lib/data/assignments";
-import { SalesAssignmentQueue } from "@/components/sales-assignment-queue";
+import { LeadAssignmentQueue } from "@/components/lead-assignment-queue";
 import { TableSkeleton } from "@/components/skeletons";
 import { assignToSales } from "./actions";
 
@@ -30,10 +30,13 @@ async function AssignmentQueue() {
   ]);
 
   return (
-    <SalesAssignmentQueue
+    <LeadAssignmentQueue
       leads={leads}
-      salesUsers={salesUsers}
+      assignees={salesUsers.map((user) => ({ id: user.id, label: user.fullName }))}
       assignAction={assignToSales}
+      selectName="salesUserId"
+      selectPlaceholder="Satış çalışanı seç"
+      title="Satış Çalışanına Atama Bekleyen Leadler"
       emptyMessage="Satışa atama bekleyen leadiniz yok."
     />
   );

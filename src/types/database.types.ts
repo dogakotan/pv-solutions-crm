@@ -1114,11 +1114,26 @@ export type Database = {
       }
       create_lead: {
         Args: {
+          p_address?: string
+          p_alternate_phone?: string
+          p_battery_interest?: string
+          p_building_type?: string
           p_city: string
+          p_competitor_offer_note?: string
+          p_competitor_offer_status?: string
           p_customer_name: string
           p_customer_type: string
+          p_district?: string
+          p_email?: string
+          p_estimated_capacity_kwp?: number
+          p_ev_interest?: string
+          p_general_notes?: string
+          p_heat_pump_interest?: string
           p_idempotency_key?: string
+          p_lead_score?: string
           p_phone: string
+          p_pool_interest?: string
+          p_roof_area_m2?: number
           p_source: string
         }
         Returns: {

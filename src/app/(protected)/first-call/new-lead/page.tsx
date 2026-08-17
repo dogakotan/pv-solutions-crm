@@ -8,7 +8,7 @@ export default function NewLeadPage() {
 
       <h1 className="text-2xl font-semibold text-foreground">Yeni Lead</h1>
 
-      <div className="max-w-2xl rounded-2xl border border-card-border bg-card p-6 shadow-sm">
+      <div className="max-w-6xl rounded-2xl border border-card-border bg-card p-6 shadow-sm">
         <NewLeadForm />
       </div>
     </div>

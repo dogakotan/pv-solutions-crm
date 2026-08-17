@@ -13,6 +13,7 @@ import { PartnerStatusBadge } from "../partner-status-badge";
 import { PartnerDetailTabs } from "./partner-detail-tabs";
 import { PARTNER_TABS, type PartnerTabKey } from "./partner-tabs";
 import { PartnerInfoTab } from "./partner-info-tab";
+import { PartnerStatusControl } from "./partner-status-control";
 
 export default async function PartnerDetailPage({
   params,
@@ -46,7 +47,11 @@ export default async function PartnerDetailPage({
           <h1 className="text-2xl font-semibold text-foreground">{partner.name}</h1>
           <p className="text-sm text-muted">{partner.partnerCode}</p>
         </div>
-        <PartnerStatusBadge status={partner.status} />
+        {canManagePartners ? (
+          <PartnerStatusControl partnerId={id} status={partner.status} />
+        ) : (
+          <PartnerStatusBadge status={partner.status} />
+        )}
       </div>
 
       <Suspense fallback={<CardSkeleton lines={6} />}>

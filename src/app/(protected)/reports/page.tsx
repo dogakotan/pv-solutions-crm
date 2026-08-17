@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   getLeadFunnel,
   getSourceConversion,
-  getOwnerPerformance,
+  getSalespersonPerformance,
   getPartnerPerformance,
   getLostReasons,
   getMonthlyWonAmount,
@@ -103,9 +103,9 @@ async function FunnelCard({ range }: { range: ReportRange }) {
 
 async function BreakdownGrid({ range }: { range: ReportRange }) {
   const supabase = await createClient();
-  const [sourceConversion, ownerPerformance, partnerPerformance, lostReasons] = await Promise.all([
+  const [sourceConversion, salespersonPerformance, partnerPerformance, lostReasons] = await Promise.all([
     getSourceConversion(supabase, range),
-    getOwnerPerformance(supabase, range),
+    getSalespersonPerformance(supabase, range),
     getPartnerPerformance(supabase, range),
     getLostReasons(supabase, range),
   ]);
@@ -145,15 +145,15 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
       </div>
 
       <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-medium text-foreground">Owner Bazlı Performans</h2>
-        {ownerPerformance.length === 0 ? (
+        <h2 className="mb-4 text-sm font-medium text-foreground">Satışçı Performansı</h2>
+        {salespersonPerformance.length === 0 ? (
           <p className="text-sm text-muted">Veri yok.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-card-border text-muted">
                 <tr>
-                  <th className="py-2 font-medium">Owner</th>
+                  <th className="py-2 font-medium">Satışçı</th>
                   <th className="py-2 font-medium">Yeni</th>
                   <th className="py-2 font-medium">Açık</th>
                   <th className="py-2 font-medium">Teklif</th>
@@ -164,9 +164,9 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
                 </tr>
               </thead>
               <tbody>
-                {ownerPerformance.map((o) => (
-                  <tr key={o.ownerId} className="border-b border-card-border last:border-0">
-                    <td className="py-2 text-foreground">{o.ownerName}</td>
+                {salespersonPerformance.map((o) => (
+                  <tr key={o.salesUserId} className="border-b border-card-border last:border-0">
+                    <td className="py-2 text-foreground">{o.salesUserName}</td>
                     <td className="py-2 text-muted">{o.newCount}</td>
                     <td className="py-2 text-muted">{o.openCount}</td>
                     <td className="py-2 text-muted">{o.offersSent}</td>

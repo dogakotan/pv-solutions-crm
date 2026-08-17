@@ -103,9 +103,9 @@ function extractOwnerName(embed: OwnerEmbed): string {
 
 export type WonAmountByCurrency = { currency: string; amount: number };
 
-export type OwnerPerformanceItem = {
-  ownerId: string;
-  ownerName: string;
+export type SalespersonPerformanceItem = {
+  salesUserId: string;
+  salesUserName: string;
   newCount: number;
   openCount: number;
   won: number;
@@ -115,14 +115,32 @@ export type OwnerPerformanceItem = {
   wonAmounts: WonAmountByCurrency[];
 };
 
-export async function getOwnerPerformance(
+/**
+ * leads.owner_id yaşam döngüsü boyunca el değiştirir: lead oluşturulunca
+ * önce onu yaratan first_call kullanıcısına, satışa atanınca satışçıya
+ * atanır (bkz. assign_lead_to_sales). Bu yüzden "kim şu an sahip" diye
+ * ham owner_id'ye göre gruplamak first_call kullanıcılarını da bu tabloya
+ * (yanlışlıkla satışçıymış gibi teklif/kazanılan tutar ile) düşürür —
+ * bu fonksiyon yalnızca pv_sales rolündeki sahiplerle sınırlıyor.
+ */
+export async function getSalespersonPerformance(
   supabase: TypedSupabaseClient,
   range: ReportDateRange
-): Promise<OwnerPerformanceItem[]> {
+): Promise<SalespersonPerformanceItem[]> {
+  const { data: salesAssignments, error: salesError } = await supabase
+    .from("user_role_assignments")
+    .select("user_id")
+    .eq("role", "pv_sales");
+  if (salesError) throw salesError;
+
+  const salesUserIds = new Set((salesAssignments ?? []).map((a) => a.user_id));
+  if (salesUserIds.size === 0) return [];
+
   let query = supabase
     .from("leads")
     .select("id, owner_id, stage, owner:profiles!leads_owner_id_fkey(full_name)")
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .in("owner_id", Array.from(salesUserIds));
   if (range.from) query = query.gte("created_at", range.from);
   if (range.to) query = query.lte("created_at", range.to);
 
@@ -188,8 +206,8 @@ export async function getOwnerPerformance(
 
   return Array.from(map.entries())
     .map(([ownerId, v]) => ({
-      ownerId,
-      ownerName: v.name,
+      salesUserId: ownerId,
+      salesUserName: v.name,
       newCount: v.newCount,
       openCount: v.openCount,
       won: v.won,

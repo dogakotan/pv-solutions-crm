@@ -70,6 +70,69 @@ export async function getVisibleOffers(supabase: TypedSupabaseClient, limit = 50
   });
 }
 
+export type PartnerOfferItem = OfferListItem & {
+  latestAmount: number | null;
+  latestCurrency: string | null;
+};
+
+/**
+ * Partner detay sayfasındaki "Teklifler" sekmesi için — bu partnere
+ * yönlendirilmiş (partner_referrals üzerinden) leadler için oluşturulmuş
+ * tekliflerin listesi, en son revizyonun tutarıyla birlikte. offer_versions
+ * tek başına partner_id taşımadığı için offers -> partner_referrals join'i
+ * gerekiyor (bkz. getSalesOutcomesForPartner'daki aynı desen).
+ */
+export async function getOffersForPartner(
+  supabase: TypedSupabaseClient,
+  partnerId: string
+): Promise<PartnerOfferItem[]> {
+  const { data, error } = await supabase
+    .from("offers")
+    .select("id, offer_no, status, created_at, leads(lead_no, customer_name), partner_referrals!inner(partner_id)")
+    .eq("partner_referrals.partner_id", partnerId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  const offers = (data ?? []).flatMap((row) => {
+    const lead = extractLead(row.leads as LeadEmbed);
+    if (!lead) return [];
+    return [{
+      id: row.id,
+      offerNo: row.offer_no,
+      status: row.status as OfferStatus,
+      createdAt: row.created_at,
+      leadNo: lead.lead_no,
+      customerName: lead.customer_name,
+    }];
+  });
+
+  const offerIds = offers.map((o) => o.id);
+  const latestByOffer = new Map<string, { amount: number; currency: string; revisionNo: number }>();
+
+  if (offerIds.length > 0) {
+    const { data: versions, error: versionsError } = await supabase
+      .from("offer_versions")
+      .select("offer_id, amount, currency, revision_no")
+      .in("offer_id", offerIds);
+
+    if (versionsError) throw versionsError;
+
+    for (const v of versions ?? []) {
+      const current = latestByOffer.get(v.offer_id);
+      if (!current || v.revision_no > current.revisionNo) {
+        latestByOffer.set(v.offer_id, { amount: v.amount, currency: v.currency, revisionNo: v.revision_no });
+      }
+    }
+  }
+
+  return offers.map((o) => ({
+    ...o,
+    latestAmount: latestByOffer.get(o.id)?.amount ?? null,
+    latestCurrency: latestByOffer.get(o.id)?.currency ?? null,
+  }));
+}
+
 export async function getOfferById(supabase: TypedSupabaseClient, id: string): Promise<OfferListItem | null> {
   const { data, error } = await supabase
     .from("offers")

@@ -4,8 +4,10 @@ import { BackLink } from "@/components/back-link";
 import { CardSkeleton } from "@/components/skeletons";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/require-role";
-import { getPartnerById, getPartnerEmployees, getPartnerInternalNote } from "@/lib/data/partners";
+import { getPartnerById, getPartnerEmployees, getPartnerInternalNote, getOpenReferralsForPartner } from "@/lib/data/partners";
 import { getSalesOutcomesForPartner } from "@/lib/data/sales-outcomes";
+import { getOffersForPartner } from "@/lib/data/offers";
+import { getPartnerPerformance } from "@/lib/data/reports";
 import type { Partner } from "@/types/partner";
 import { PartnerStatusBadge } from "../partner-status-badge";
 import { PartnerDetailTabs } from "./partner-detail-tabs";
@@ -71,11 +73,15 @@ async function PartnerDetailTabsSection({
   canManagePartners: boolean;
 }) {
   const supabase = await createClient();
-  const [employees, salesOutcomes, internalNote] = await Promise.all([
+  const [employees, salesOutcomes, internalNote, openReferrals, offers, performanceList] = await Promise.all([
     canManagePartners ? getPartnerEmployees(supabase, partnerId) : Promise.resolve([]),
     getSalesOutcomesForPartner(supabase, partnerId),
     canManagePartners ? getPartnerInternalNote(supabase, partnerId) : Promise.resolve(null),
+    getOpenReferralsForPartner(supabase, partnerId),
+    getOffersForPartner(supabase, partnerId),
+    getPartnerPerformance(supabase, { from: null, to: null }),
   ]);
+  const performance = performanceList.find((p) => p.partnerId === partnerId) ?? null;
 
   return (
     <PartnerDetailTabs
@@ -83,6 +89,9 @@ async function PartnerDetailTabsSection({
       employees={employees}
       salesOutcomes={salesOutcomes}
       internalNote={internalNote}
+      openReferrals={openReferrals}
+      offers={offers}
+      performance={performance}
       initialTab={initialTab}
       infoTab={<PartnerInfoTab partner={partner} />}
       canManagePartners={canManagePartners}

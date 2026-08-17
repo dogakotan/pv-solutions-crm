@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
+import type { PartnerReferralStatus } from "@/types/lead";
 import { APPLICATION_AREAS, type Partner, type PartnerEmployee, type PartnerStats, type PartnerStatus } from "@/types/partner";
 
 type TypedSupabaseClient = SupabaseClient<Database>;
@@ -311,6 +312,66 @@ type RoleEmbed = { role: string } | { role: string }[] | null;
 function extractRole(embed: RoleEmbed): string | null {
   if (!embed) return null;
   return Array.isArray(embed) ? (embed[0]?.role ?? null) : embed.role;
+}
+
+type ReferralLeadEmbed =
+  | { lead_no: string; customer_name: string; city: string }
+  | { lead_no: string; customer_name: string; city: string }[]
+  | null;
+
+function extractReferralLead(embed: ReferralLeadEmbed) {
+  if (!embed) return null;
+  return Array.isArray(embed) ? (embed[0] ?? null) : embed;
+}
+
+export type OpenPartnerReferral = {
+  id: string;
+  status: PartnerReferralStatus;
+  sentAt: string;
+  responseDueAt: string;
+  isOverdue: boolean;
+  leadId: string;
+  leadNo: string;
+  customerName: string;
+  city: string;
+};
+
+/**
+ * Partner detay sayfasındaki "Açık Yönlendirmeler" sekmesi için — bu
+ * partnere gönderilmiş ve henüz kapanmamış (closed_at is null)
+ * yönlendirmeler. "Kapanmış" olanlar (kabul edilip sonuçlanmış veya
+ * reddedilip iptal edilmiş) burada değil, satış sonuçlarında görünür.
+ */
+export async function getOpenReferralsForPartner(
+  supabase: TypedSupabaseClient,
+  partnerId: string
+): Promise<OpenPartnerReferral[]> {
+  const { data, error } = await supabase
+    .from("partner_referrals")
+    .select("id, status, sent_at, response_due_at, lead_id, leads(lead_no, customer_name, city)")
+    .eq("partner_id", partnerId)
+    .is("closed_at", null)
+    .order("sent_at", { ascending: false });
+
+  if (error) throw error;
+
+  const now = Date.now();
+
+  return (data ?? []).flatMap((row) => {
+    const lead = extractReferralLead(row.leads as ReferralLeadEmbed);
+    if (!lead) return [];
+    return [{
+      id: row.id,
+      status: row.status as PartnerReferralStatus,
+      sentAt: row.sent_at,
+      responseDueAt: row.response_due_at,
+      isOverdue: row.status === "pending" && new Date(row.response_due_at).getTime() < now,
+      leadId: row.lead_id,
+      leadNo: lead.lead_no,
+      customerName: lead.customer_name,
+      city: lead.city,
+    }];
+  });
 }
 
 export async function getPartnerEmployees(

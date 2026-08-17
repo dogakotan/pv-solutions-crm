@@ -252,7 +252,6 @@ export type Database = {
         Row: {
           address: string | null
           alternate_phone: string | null
-          archived_at: string | null
           battery_interest: string | null
           building_type: string | null
           city: string
@@ -288,7 +287,6 @@ export type Database = {
         Insert: {
           address?: string | null
           alternate_phone?: string | null
-          archived_at?: string | null
           battery_interest?: string | null
           building_type?: string | null
           city: string
@@ -324,7 +322,6 @@ export type Database = {
         Update: {
           address?: string | null
           alternate_phone?: string | null
-          archived_at?: string | null
           battery_interest?: string | null
           building_type?: string | null
           city?: string
@@ -1072,7 +1069,6 @@ export type Database = {
         Returns: {
           address: string | null
           alternate_phone: string | null
-          archived_at: string | null
           battery_interest: string | null
           building_type: string | null
           city: string
@@ -1125,7 +1121,6 @@ export type Database = {
         Returns: {
           address: string | null
           alternate_phone: string | null
-          archived_at: string | null
           battery_interest: string | null
           building_type: string | null
           city: string
@@ -1331,7 +1326,6 @@ export type Database = {
         Returns: {
           address: string | null
           alternate_phone: string | null
-          archived_at: string | null
           battery_interest: string | null
           building_type: string | null
           city: string

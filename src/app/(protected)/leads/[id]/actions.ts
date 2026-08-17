@@ -133,7 +133,10 @@ const qualifyLeadSchema = z.object({
  * lead_score ve nitelendirme alanları (ilgi, teknik detay, rakip teklifi vb.)
  * korumalı kolon değil (bkz. lead_protected_columns_and_assignment_rpc) —
  * leads_update_pv RLS'i first_call'ın kendi lead'ini (created_by/first_call_user_id)
- * doğrudan update etmesine zaten izin veriyor, bu yüzden ayrı bir RPC gerekmiyor.
+ * doğrudan update etmesine zaten izin veriyor. qualify_lead RPC'si de bu RLS'e
+ * güvenir (SECURITY INVOKER) — mevcut stage'i öğrenmek için ayrı bir SELECT
+ * yapmak yerine, stage geçişi (new -> contacted) tek UPDATE'in içinde CASE ile
+ * yapılır (bkz. qualify_lead_rpc migration'ı).
  */
 export async function qualifyLead(
   _prevState: QualifyLeadState,
@@ -166,37 +169,24 @@ export async function qualifyLead(
 
   const supabase = await createClient();
 
-  const { data: currentLead, error: fetchError } = await supabase
-    .from("leads")
-    .select("stage")
-    .eq("id", leadId)
-    .maybeSingle();
-
-  if (fetchError || !currentLead) {
-    return { error: "Lead bulunamadı." };
-  }
-
-  const { error } = await supabase
-    .from("leads")
-    .update({
-      lead_score: fields.leadScore,
-      district: fields.district,
-      address: fields.address,
-      alternate_phone: fields.alternatePhone,
-      email: fields.email,
-      building_type: fields.buildingType,
-      roof_area_m2: fields.roofAreaM2,
-      estimated_capacity_kwp: fields.estimatedCapacityKwp,
-      pool_interest: fields.poolInterest,
-      heat_pump_interest: fields.heatPumpInterest,
-      ev_interest: fields.evInterest,
-      battery_interest: fields.batteryInterest,
-      competitor_offer_status: fields.competitorOfferStatus,
-      competitor_offer_note: fields.competitorOfferNote,
-      general_notes: fields.generalNotes,
-      ...(currentLead.stage === "new" ? { stage: "contacted" } : {}),
-    })
-    .eq("id", leadId);
+  const { error } = await supabase.rpc("qualify_lead", {
+    p_lead_id: leadId,
+    p_lead_score: fields.leadScore ?? undefined,
+    p_district: fields.district ?? undefined,
+    p_address: fields.address ?? undefined,
+    p_alternate_phone: fields.alternatePhone ?? undefined,
+    p_email: fields.email ?? undefined,
+    p_building_type: fields.buildingType ?? undefined,
+    p_roof_area_m2: fields.roofAreaM2 ?? undefined,
+    p_estimated_capacity_kwp: fields.estimatedCapacityKwp ?? undefined,
+    p_pool_interest: fields.poolInterest ?? undefined,
+    p_heat_pump_interest: fields.heatPumpInterest ?? undefined,
+    p_ev_interest: fields.evInterest ?? undefined,
+    p_battery_interest: fields.batteryInterest ?? undefined,
+    p_competitor_offer_status: fields.competitorOfferStatus ?? undefined,
+    p_competitor_offer_note: fields.competitorOfferNote ?? undefined,
+    p_general_notes: fields.generalNotes ?? undefined,
+  });
 
   if (error) {
     return { error: "Görüşme sonucu kaydedilemedi: " + error.message };

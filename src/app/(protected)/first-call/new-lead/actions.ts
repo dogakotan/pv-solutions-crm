@@ -131,7 +131,9 @@ export async function createLead(
    * transaction'da yapılır (bkz. create_lead_rpc migration'ı) — anahtar
    * zaten kullanılmışsa unique_violation ile döner, bu isteğin ağ
    * seviyesinde bir tekrarı olduğunu varsayıp işlemi tekrarlamadan
-   * doğrudan başarı sonucuna yönlendiriyoruz.
+   * doğrudan başarı sonucuna yönlendiriyoruz. Nitelendirme alanları tek
+   * jsonb parametrede gider (bkz. create_lead_jsonb_payload migration'ı) —
+   * yeni bir alan eklemek artık RPC imzasını değiştirmeyi gerektirmiyor.
    */
   const { error } = await supabase.rpc("create_lead", {
     p_customer_type: customerType,
@@ -140,21 +142,23 @@ export async function createLead(
     p_city: city,
     p_source: source,
     p_idempotency_key: idempotencyKey,
-    p_district: qualificationFields.district,
-    p_address: qualificationFields.address,
-    p_alternate_phone: qualificationFields.alternatePhone,
-    p_email: qualificationFields.email,
-    p_building_type: qualificationFields.buildingType,
-    p_roof_area_m2: qualificationFields.roofAreaM2,
-    p_estimated_capacity_kwp: qualificationFields.estimatedCapacityKwp,
-    p_pool_interest: qualificationFields.poolInterest,
-    p_heat_pump_interest: qualificationFields.heatPumpInterest,
-    p_ev_interest: qualificationFields.evInterest,
-    p_battery_interest: qualificationFields.batteryInterest,
-    p_competitor_offer_status: qualificationFields.competitorOfferStatus,
-    p_competitor_offer_note: qualificationFields.competitorOfferNote,
-    p_general_notes: qualificationFields.generalNotes,
-    p_lead_score: qualificationFields.leadScore,
+    p_qualification: {
+      district: qualificationFields.district,
+      address: qualificationFields.address,
+      alternate_phone: qualificationFields.alternatePhone,
+      email: qualificationFields.email,
+      building_type: qualificationFields.buildingType,
+      roof_area_m2: qualificationFields.roofAreaM2,
+      estimated_capacity_kwp: qualificationFields.estimatedCapacityKwp,
+      pool_interest: qualificationFields.poolInterest,
+      heat_pump_interest: qualificationFields.heatPumpInterest,
+      ev_interest: qualificationFields.evInterest,
+      battery_interest: qualificationFields.batteryInterest,
+      competitor_offer_status: qualificationFields.competitorOfferStatus,
+      competitor_offer_note: qualificationFields.competitorOfferNote,
+      general_notes: qualificationFields.generalNotes,
+      lead_score: qualificationFields.leadScore,
+    },
   });
 
   if (error) {

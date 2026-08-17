@@ -1476,6 +1476,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_partner_rating: {
+        Args: { p_partner_id: string; p_rating?: number }
+        Returns: {
+          address: string | null
+          city: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          partner_code: string | null
+          phone: string | null
+          pv_owner_id: string | null
+          rating: number | null
+          status: string
+          tax_number: string | null
+          tax_office: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "partners"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_user_active: {
         Args: { p_is_active: boolean; p_user_id: string }
         Returns: {

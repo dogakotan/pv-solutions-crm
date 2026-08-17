@@ -93,7 +93,7 @@ async function PartnerDetailTabsSection({
       offers={offers}
       performance={performance}
       initialTab={initialTab}
-      infoTab={<PartnerInfoTab partner={partner} />}
+      infoTab={<PartnerInfoTab partner={partner} canManagePartners={canManagePartners} />}
       canManagePartners={canManagePartners}
     />
   );

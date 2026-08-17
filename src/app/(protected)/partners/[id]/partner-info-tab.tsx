@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Partner } from "@/types/partner";
 import { PartnerMap } from "./partner-map";
+import { PartnerRatingForm } from "./partner-rating-form";
 
 function PartnerMapSkeleton() {
   return <div className="h-64 w-full animate-pulse rounded-lg border border-card-border bg-card" />;
@@ -15,7 +16,13 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function PartnerInfoTab({ partner }: { partner: Partner }) {
+export function PartnerInfoTab({
+  partner,
+  canManagePartners,
+}: {
+  partner: Partner;
+  canManagePartners: boolean;
+}) {
   const detailedQuery = [partner.address, partner.city, "Türkiye"].filter(Boolean).join(", ");
   const cityQuery = [partner.city, "Türkiye"].filter(Boolean).join(", ");
   const mapQueries = [detailedQuery, cityQuery];
@@ -34,7 +41,16 @@ export function PartnerInfoTab({ partner }: { partner: Partner }) {
         <Field label="Yetkinlikler" value={partner.capabilities.join(", ")} />
         <Field label="Uygulama Alanı" value={partner.applicationAreas.join(", ") || "—"} />
         <Field label="PV Sorumlusu" value={partner.pvOwnerName} />
-        <Field label="Puan" value={partner.rating != null ? `${partner.rating.toFixed(1)}/5` : "—"} />
+        {canManagePartners ? (
+          <div>
+            <dt className="text-xs font-medium uppercase tracking-wide text-muted">Puan</dt>
+            <dd className="mt-1">
+              <PartnerRatingForm partnerId={partner.id} currentRating={partner.rating} />
+            </dd>
+          </div>
+        ) : (
+          <Field label="Puan" value={partner.rating != null ? `${partner.rating.toFixed(1)}/5` : "—"} />
+        )}
         <Field label="Oluşturulma Tarihi" value={partner.createdAt} />
       </dl>
 

@@ -9,7 +9,8 @@ import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { PartnersTable } from "./partners-table";
 
 export default async function PartnersPage() {
-  await requireRole(["admin"]);
+  const { appRole } = await requireRole(["admin", "sales"]);
+  const canManagePartners = appRole === "admin";
 
   return (
     <div className="flex flex-col gap-6">
@@ -18,12 +19,14 @@ export default async function PartnersPage() {
           <h1 className="text-2xl font-semibold text-foreground">Partnerler</h1>
           <p className="text-sm text-muted">Bayi ve iş ortağı firmalar</p>
         </div>
-        <Link
-          href="/partners/new"
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
-        >
-          + Yeni Partner
-        </Link>
+        {canManagePartners && (
+          <Link
+            href="/partners/new"
+            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
+          >
+            + Yeni Partner
+          </Link>
+        )}
       </div>
 
       <Suspense

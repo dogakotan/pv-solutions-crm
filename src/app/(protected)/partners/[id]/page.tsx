@@ -19,7 +19,8 @@ export default async function PartnerDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ tab?: string }>;
 }) {
-  await requireRole(["admin"]);
+  const { appRole } = await requireRole(["admin", "sales"]);
+  const canManagePartners = appRole === "admin";
   const supabase = await createClient();
 
   const { id } = await params;
@@ -47,7 +48,12 @@ export default async function PartnerDetailPage({
       </div>
 
       <Suspense fallback={<CardSkeleton lines={6} />}>
-        <PartnerDetailTabsSection partner={partner} partnerId={id} initialTab={initialTab} />
+        <PartnerDetailTabsSection
+          partner={partner}
+          partnerId={id}
+          initialTab={initialTab}
+          canManagePartners={canManagePartners}
+        />
       </Suspense>
     </div>
   );
@@ -57,16 +63,18 @@ async function PartnerDetailTabsSection({
   partner,
   partnerId,
   initialTab,
+  canManagePartners,
 }: {
   partner: Partner;
   partnerId: string;
   initialTab: PartnerTabKey;
+  canManagePartners: boolean;
 }) {
   const supabase = await createClient();
   const [employees, salesOutcomes, internalNote] = await Promise.all([
-    getPartnerEmployees(supabase, partnerId),
+    canManagePartners ? getPartnerEmployees(supabase, partnerId) : Promise.resolve([]),
     getSalesOutcomesForPartner(supabase, partnerId),
-    getPartnerInternalNote(supabase, partnerId),
+    canManagePartners ? getPartnerInternalNote(supabase, partnerId) : Promise.resolve(null),
   ]);
 
   return (
@@ -77,6 +85,7 @@ async function PartnerDetailTabsSection({
       internalNote={internalNote}
       initialTab={initialTab}
       infoTab={<PartnerInfoTab partner={partner} />}
+      canManagePartners={canManagePartners}
     />
   );
 }

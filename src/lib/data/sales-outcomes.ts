@@ -78,10 +78,11 @@ type PartnerOutcomeLeadEmbed =
 /**
  * Partner detay sayfasındaki "Satış Sonuçları" sekmesi için — bu
  * partnere yönlendirilmiş (partner_referrals üzerinden) leadlerin
- * kazanılan/kaybedilen sonuçları. Yalnızca admin görür (partner detay
- * sayfası zaten admin-only), bu yüzden RLS'te pv_admin dalı üzerinden
- * tüm partnerlerin sonuçlarına erişilebiliyor — burada partner_id ile
- * filtreleniyor.
+ * kazanılan/kaybedilen sonuçları. Admin bu sorguda pv_admin RLS dalı
+ * üzerinden tüm partnerlerin sonuçlarına erişir (burada partner_id ile
+ * filtreleniyor); partner detay sayfası artık pv_sales'e de açık olduğu
+ * için o rolde çağrılırsa sales_outcomes_select RLS'i zaten yalnızca
+ * kendi leadlerinin sonuçlarıyla sınırlıyor — ayrı bir filtre gerekmez.
  */
 export async function getSalesOutcomesForPartner(
   supabase: TypedSupabaseClient,

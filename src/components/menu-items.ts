@@ -32,7 +32,7 @@ export const menuItems: MenuItem[] = [
   { label: "Leadlerim", href: "/sales/my-leads", icon: Briefcase, roles: ["sales"] },
   { label: "Partnere Yönlendir", href: "/sales/assignments", icon: Handshake, roles: ["sales"] },
   { label: "Bana Yönlendirilenler", href: "/partner/assigned-leads", icon: Handshake, roles: ["partner"] },
-  { label: "Partnerler", href: "/partners", icon: Handshake, roles: ["admin"] },
+  { label: "Partnerler", href: "/partners", icon: Handshake, roles: ["admin", "sales"] },
   { label: "Kullanıcılar", href: "/admin/users", icon: Users, roles: ["admin"] },
   { label: "Teklifler", href: "/offers", icon: FileText, roles: ALL_ROLES },
   { label: "Aktiviteler", href: "/activities", icon: ListChecks, roles: ALL_ROLES },

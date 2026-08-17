@@ -23,6 +23,7 @@ export function PartnerDetailTabs({
   internalNote,
   initialTab,
   infoTab,
+  canManagePartners,
 }: {
   partner: Partner;
   employees: PartnerEmployee[];
@@ -37,8 +38,15 @@ export function PartnerDetailTabs({
    * hazır JSX olarak buraya geçiriyor.
    */
   infoTab: ReactNode;
+  /** Çalışanlar (ekleme formu dahil) ve PV İç Notları yalnızca admin'e gösterilir. */
+  canManagePartners: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState<PartnerTabKey>(initialTab);
+  const visibleTabs = canManagePartners
+    ? PARTNER_TABS
+    : PARTNER_TABS.filter((t) => t.key !== "employees" && t.key !== "internal-notes");
+  const [activeTab, setActiveTab] = useState<PartnerTabKey>(
+    visibleTabs.some((t) => t.key === initialTab) ? initialTab : "info"
+  );
 
   function selectTab(key: PartnerTabKey) {
     setActiveTab(key);
@@ -50,7 +58,7 @@ export function PartnerDetailTabs({
   return (
     <>
       <div className="flex gap-1 overflow-x-auto border-b border-card-border">
-        {PARTNER_TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t.key}
             type="button"

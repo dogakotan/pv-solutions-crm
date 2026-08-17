@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -449,6 +450,32 @@ export async function deleteOfferVersion(formData: FormData) {
   if (leadId) revalidatePath(`/leads/${leadId}`);
   if (offerId) revalidatePath(`/offers/${offerId}`);
   revalidatePath("/offers");
+}
+
+/**
+ * Yalnızca pv_admin çağırabilir (yetki kontrolü soft_delete_lead RPC'sinin
+ * içinde) — lead'i kalıcı silmez, deleted_at/deleted_by set eder ve
+ * audit_logs'a yazar (bkz. lead_protected_columns_and_assignment_rpc
+ * migration'ı). Buton yalnızca admin'e gösterilir.
+ */
+export async function softDeleteLead(formData: FormData) {
+  const leadId = String(formData.get("leadId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  if (!leadId) {
+    throw new Error("Geçersiz istek.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("soft_delete_lead", {
+    p_lead_id: leadId,
+    p_reason: reason || undefined,
+  });
+
+  if (error) throw error;
+
+  revalidatePath("/leads");
+  redirect("/leads");
 }
 
 export type RecordOutcomeState = {

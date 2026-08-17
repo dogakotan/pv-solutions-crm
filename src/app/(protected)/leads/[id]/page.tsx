@@ -23,7 +23,8 @@ import { ActivityForm } from "./activity-form";
 import { SalesOutcomeForm } from "./sales-outcome-form";
 import { OfferForm } from "./offer-form";
 import { QualificationForm } from "./qualification-form";
-import { assignPartner, deleteOfferVersion } from "./actions";
+import { assignPartner, deleteOfferVersion, softDeleteLead } from "./actions";
+import { DeleteLeadButton } from "./delete-lead-button";
 import { INTEREST_OPTIONS } from "@/components/lead-qualification-fields";
 
 const INTEREST_LABELS: Record<string, string> = Object.fromEntries(
@@ -97,6 +98,7 @@ export default async function LeadDetailPage({
         <div className="flex items-center gap-2">
           <LeadStageBadge stage={lead.stage} />
           <LeadScoreBadge score={lead.leadScore} />
+          {appRole === "admin" && <DeleteLeadButton leadId={lead.id} deleteAction={softDeleteLead} />}
         </div>
       </div>
 

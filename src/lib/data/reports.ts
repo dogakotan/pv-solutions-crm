@@ -101,6 +101,8 @@ function extractOwnerName(embed: OwnerEmbed): string {
   return owner?.full_name || "—";
 }
 
+export type WonAmountByCurrency = { currency: string; amount: number };
+
 export type OwnerPerformanceItem = {
   ownerId: string;
   ownerName: string;
@@ -108,6 +110,9 @@ export type OwnerPerformanceItem = {
   openCount: number;
   won: number;
   lost: number;
+  conversionRate: number;
+  offersSent: number;
+  wonAmounts: WonAmountByCurrency[];
 };
 
 export async function getOwnerPerformance(
@@ -116,7 +121,7 @@ export async function getOwnerPerformance(
 ): Promise<OwnerPerformanceItem[]> {
   let query = supabase
     .from("leads")
-    .select("owner_id, stage, owner:profiles!leads_owner_id_fkey(full_name)")
+    .select("id, owner_id, stage, owner:profiles!leads_owner_id_fkey(full_name)")
     .is("deleted_at", null);
   if (range.from) query = query.gte("created_at", range.from);
   if (range.to) query = query.lte("created_at", range.to);
@@ -124,20 +129,61 @@ export async function getOwnerPerformance(
   const { data, error } = await query;
   if (error) throw error;
 
+  const leads = data ?? [];
+  const leadIds = leads.map((l) => l.id);
+  const ownerIdByLeadId = new Map(leads.map((l) => [l.id, l.owner_id]));
+
+  const [offersResult, outcomesResult] =
+    leadIds.length > 0
+      ? await Promise.all([
+          supabase.from("offers").select("lead_id").in("lead_id", leadIds),
+          supabase
+            .from("sales_outcomes")
+            .select("lead_id, final_amount, currency")
+            .eq("outcome", "won")
+            .in("lead_id", leadIds),
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }];
+
+  if (offersResult.error) throw offersResult.error;
+  if (outcomesResult.error) throw outcomesResult.error;
+
   const map = new Map<
     string,
-    { name: string; newCount: number; openCount: number; won: number; lost: number }
+    {
+      name: string;
+      newCount: number;
+      openCount: number;
+      won: number;
+      lost: number;
+      offersSent: number;
+      wonAmounts: Map<string, number>;
+    }
   >();
 
-  for (const row of data ?? []) {
+  for (const row of leads) {
     const name = extractOwnerName(row.owner as OwnerEmbed);
-    const entry = map.get(row.owner_id) ?? { name, newCount: 0, openCount: 0, won: 0, lost: 0 };
+    const entry =
+      map.get(row.owner_id) ??
+      { name, newCount: 0, openCount: 0, won: 0, lost: 0, offersSent: 0, wonAmounts: new Map<string, number>() };
     const stage = row.stage as LeadStage;
     if (stage === "new") entry.newCount += 1;
     if (!CLOSED_STAGES.has(stage)) entry.openCount += 1;
     if (stage === "won") entry.won += 1;
     if (stage === "lost") entry.lost += 1;
     map.set(row.owner_id, entry);
+  }
+
+  for (const o of offersResult.data ?? []) {
+    const entry = map.get(ownerIdByLeadId.get(o.lead_id) ?? "");
+    if (entry) entry.offersSent += 1;
+  }
+
+  for (const so of outcomesResult.data ?? []) {
+    if (so.final_amount == null || !so.currency) continue;
+    const entry = map.get(ownerIdByLeadId.get(so.lead_id) ?? "");
+    if (!entry) continue;
+    entry.wonAmounts.set(so.currency, (entry.wonAmounts.get(so.currency) ?? 0) + so.final_amount);
   }
 
   return Array.from(map.entries())
@@ -148,11 +194,14 @@ export async function getOwnerPerformance(
       openCount: v.openCount,
       won: v.won,
       lost: v.lost,
+      conversionRate: v.won + v.lost > 0 ? Math.round((v.won / (v.won + v.lost)) * 100) : 0,
+      offersSent: v.offersSent,
+      wonAmounts: Array.from(v.wonAmounts.entries()).map(([currency, amount]) => ({ currency, amount })),
     }))
     .sort((a, b) => b.openCount - a.openCount);
 }
 
-type PartnerEmbed = { name: string } | { name: string }[] | null;
+type PartnerEmbed = { name: string; rating: number | null } | { name: string; rating: number | null }[] | null;
 
 function extractPartnerName(embed: PartnerEmbed): string {
   if (!embed) return "—";
@@ -160,9 +209,16 @@ function extractPartnerName(embed: PartnerEmbed): string {
   return partner?.name || "—";
 }
 
+function extractPartnerRating(embed: PartnerEmbed): number | null {
+  if (!embed) return null;
+  const partner = Array.isArray(embed) ? embed[0] : embed;
+  return partner?.rating ?? null;
+}
+
 export type PartnerPerformanceItem = {
   partnerId: string;
   partnerName: string;
+  rating: number | null;
   referralCount: number;
   acceptanceRate: number;
   avgResponseHours: number | null;
@@ -176,7 +232,7 @@ export async function getPartnerPerformance(
 ): Promise<PartnerPerformanceItem[]> {
   let query = supabase
     .from("partner_referrals")
-    .select("id, partner_id, status, sent_at, responded_at, partners(name)");
+    .select("id, partner_id, status, sent_at, responded_at, partners(name, rating)");
   if (range.from) query = query.gte("sent_at", range.from);
   if (range.to) query = query.lte("sent_at", range.to);
 
@@ -212,6 +268,7 @@ export async function getPartnerPerformance(
     string,
     {
       name: string;
+      rating: number | null;
       referralCount: number;
       acceptedCount: number;
       respondedCount: number;
@@ -224,9 +281,11 @@ export async function getPartnerPerformance(
 
   for (const row of referrals) {
     const name = extractPartnerName(row.partners as PartnerEmbed);
+    const rating = extractPartnerRating(row.partners as PartnerEmbed);
     const entry =
       map.get(row.partner_id) ?? {
         name,
+        rating,
         referralCount: 0,
         acceptedCount: 0,
         respondedCount: 0,
@@ -253,6 +312,7 @@ export async function getPartnerPerformance(
     .map(([partnerId, v]) => ({
       partnerId,
       partnerName: v.name,
+      rating: v.rating,
       referralCount: v.referralCount,
       acceptanceRate: v.respondedCount > 0 ? Math.round((v.acceptedCount / v.respondedCount) * 100) : 0,
       avgResponseHours:

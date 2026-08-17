@@ -1286,6 +1286,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      provision_staff_user: {
+        Args: {
+          p_phone?: string
+          p_role: Database["public"]["Enums"]["app_role"]
+          p_user_id: string
+        }
+        Returns: {
+          created_at: string
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean
+          partner_id: string | null
+          phone: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       qualify_lead: {
         Args: {
           p_address?: string

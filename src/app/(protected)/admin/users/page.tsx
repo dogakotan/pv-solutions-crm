@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { updateUserRole, updateUserActive } from "./actions";
+import { AddStaffUserForm } from "./add-staff-user-form";
 import type { DbRole } from "@/lib/auth/roles";
 
 const ROLE_LABELS: Record<DbRole, string> = {
@@ -40,13 +41,16 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Kullanıcılar</h1>
-        <p className="mt-1 text-sm text-muted">
-          Yeni kullanıcı davet etme Supabase Auth Admin API gerektirir ve bu ortamda
-          henüz bağlı değil — yeni kullanıcıları Supabase Dashboard&apos;dan oluşturup
-          burada rol atayabilirsiniz.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Kullanıcılar</h1>
+          <p className="mt-1 text-sm text-muted">
+            pv_admin, pv_sales ve first_call hesapları burada oluşturulur ve rolleri
+            yönetilir. Partner hesapları için ilgili partnerin sayfasındaki
+            &quot;Çalışan Ekle&quot; formu kullanılır.
+          </p>
+        </div>
+        <AddStaffUserForm />
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-card-border bg-card shadow-sm">

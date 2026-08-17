@@ -156,8 +156,11 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
                   <th className="py-2 font-medium">Owner</th>
                   <th className="py-2 font-medium">Yeni</th>
                   <th className="py-2 font-medium">Açık</th>
+                  <th className="py-2 font-medium">Teklif</th>
                   <th className="py-2 font-medium">Kazanılan</th>
                   <th className="py-2 font-medium">Kaybedilen</th>
+                  <th className="py-2 font-medium">Dönüşüm</th>
+                  <th className="py-2 font-medium">Kazanılan Tutar</th>
                 </tr>
               </thead>
               <tbody>
@@ -166,8 +169,17 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
                     <td className="py-2 text-foreground">{o.ownerName}</td>
                     <td className="py-2 text-muted">{o.newCount}</td>
                     <td className="py-2 text-muted">{o.openCount}</td>
+                    <td className="py-2 text-muted">{o.offersSent}</td>
                     <td className="py-2 text-green-700">{o.won}</td>
                     <td className="py-2 text-red-700">{o.lost}</td>
+                    <td className="py-2 text-foreground">%{o.conversionRate}</td>
+                    <td className="py-2 text-foreground">
+                      {o.wonAmounts.length > 0
+                        ? o.wonAmounts
+                            .map((w) => `${w.amount.toLocaleString("tr-TR")} ${w.currency}`)
+                            .join(", ")
+                        : "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -186,6 +198,7 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
               <thead className="border-b border-card-border text-muted">
                 <tr>
                   <th className="py-2 font-medium">Partner</th>
+                  <th className="py-2 font-medium">Puan</th>
                   <th className="py-2 font-medium">Yönlendirme</th>
                   <th className="py-2 font-medium">Kabul Oranı</th>
                   <th className="py-2 font-medium">Ort. Cevap</th>
@@ -197,6 +210,7 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
                 {partnerPerformance.map((p) => (
                   <tr key={p.partnerId} className="border-b border-card-border last:border-0">
                     <td className="py-2 text-foreground">{p.partnerName}</td>
+                    <td className="py-2 text-muted">{p.rating != null ? p.rating.toFixed(1) : "—"}</td>
                     <td className="py-2 text-muted">{p.referralCount}</td>
                     <td className="py-2 text-muted">%{p.acceptanceRate}</td>
                     <td className="py-2 text-muted">

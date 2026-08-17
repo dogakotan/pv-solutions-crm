@@ -24,6 +24,7 @@ export function PartnerStatusControl({
       <PartnerStatusBadge status={status} />
       <select
         name="status"
+        data-testid="partner-status-select"
         defaultValue={status}
         className="rounded-lg border border-card-border px-2 py-1 text-xs outline-none focus:border-brand focus:ring-1 focus:ring-brand"
       >
@@ -35,6 +36,7 @@ export function PartnerStatusControl({
       </select>
       <button
         type="submit"
+        data-testid="partner-status-save"
         disabled={pending}
         className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background disabled:opacity-50"
       >

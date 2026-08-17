@@ -20,6 +20,7 @@ export function PartnerRatingForm({
       <input
         type="number"
         name="rating"
+        data-testid="partner-rating-input"
         min={0}
         max={5}
         step={0.1}
@@ -30,6 +31,7 @@ export function PartnerRatingForm({
       <span className="text-xs text-muted">/ 5</span>
       <button
         type="submit"
+        data-testid="partner-rating-save"
         disabled={pending}
         className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background disabled:opacity-50"
       >

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import type { OfferListItem } from "@/lib/data/offers";
 import type { OfferStatus } from "@/types/offer";
 import { OfferStatusBadge } from "@/components/offer-badges";
@@ -40,34 +41,49 @@ export function OffersTable({ offers }: { offers: OfferListItem[] }) {
   const currentPage = Math.min(page, totalPages);
   const pageOffers = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
+  const exportParams = new URLSearchParams();
+  if (search.trim()) exportParams.set("q", search.trim());
+  if (statusFilter !== "all") exportParams.set("status", statusFilter);
+  const exportHref = `/offers/excel${exportParams.toString() ? `?${exportParams.toString()}` : ""}`;
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <input
-          value={search}
-          onChange={(event) => {
-            setSearch(event.target.value);
-            setPage(1);
-          }}
-          placeholder="Teklif no, lead no veya müşteri ara..."
-          className={`${inputClass} sm:w-72`}
-        />
-        <select
-          aria-label="Duruma göre filtrele"
-          value={statusFilter}
-          onChange={(event) => {
-            setStatusFilter(event.target.value as OfferStatus | "all");
-            setPage(1);
-          }}
-          className={`${inputClass} sm:w-48`}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <input
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Teklif no, lead no veya müşteri ara..."
+            className={`${inputClass} sm:w-72`}
+          />
+          <select
+            aria-label="Duruma göre filtrele"
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value as OfferStatus | "all");
+              setPage(1);
+            }}
+            className={`${inputClass} sm:w-48`}
+          >
+            <option value="all">Tüm durumlar</option>
+            {Object.entries(OFFER_STATUS_LABELS).map(([status, label]) => (
+              <option key={status} value={status}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <a
+          href={exportHref}
+          className="flex items-center justify-center gap-2 rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-foreground hover:bg-background"
         >
-          <option value="all">Tüm durumlar</option>
-          {Object.entries(OFFER_STATUS_LABELS).map(([status, label]) => (
-            <option key={status} value={status}>
-              {label}
-            </option>
-          ))}
-        </select>
+          <Download className="h-4 w-4" aria-hidden="true" />
+          Excel&apos;e Aktar
+        </a>
       </div>
 
       {filtered.length === 0 ? (

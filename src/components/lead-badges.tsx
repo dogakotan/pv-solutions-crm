@@ -46,7 +46,7 @@ export function LeadScoreBadge({ score }: { score: LeadScore | null }) {
 }
 
 const REFERRAL_STATUS_STYLES: Record<PartnerReferralStatus, { label: string; className: string }> = {
-  pending: { label: "Bekliyor", className: "bg-amber-50 text-amber-700" },
+  pending: { label: "Yönlendirildi", className: "bg-amber-50 text-amber-700" },
   accepted: { label: "Kabul Edildi", className: "bg-blue-50 text-blue-700" },
   rejected: { label: "Reddedildi", className: "bg-red-50 text-red-700" },
   cancelled: { label: "İptal Edildi", className: "bg-neutral-100 text-neutral-600" },

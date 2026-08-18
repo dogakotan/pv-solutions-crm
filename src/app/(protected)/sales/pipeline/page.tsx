@@ -9,6 +9,7 @@ import { setLeadStage } from "./actions";
 const COLUMNS: { stage: LeadStage; label: string; next: LeadStage | null }[] = [
   { stage: "new", label: "Yeni", next: "contacted" },
   { stage: "contacted", label: "İletişime Geçildi", next: "survey_scheduled" },
+  { stage: "referred", label: "Yönlendirildi", next: "survey_scheduled" },
   { stage: "survey_scheduled", label: "Keşif Planlandı", next: "survey_completed" },
   { stage: "survey_completed", label: "Keşif Tamamlandı", next: "proposal_preparing" },
   { stage: "proposal_preparing", label: "Teklif Hazırlanıyor", next: "proposal_sent" },

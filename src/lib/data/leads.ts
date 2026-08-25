@@ -318,15 +318,34 @@ export async function getFirstCallLeadKpis(supabase: TypedSupabaseClient) {
 export async function getSalesLeadKpis(supabase: TypedSupabaseClient) {
   const { start, end } = todayRange();
 
-  const [{ count: total }, { count: dueToday }] = await Promise.all([
+  const [
+    { count: total },
+    { count: dueToday },
+    { count: won },
+    { count: lost },
+    { count: overduePartner },
+  ] = await Promise.all([
     supabase.from("leads").select("id", { count: "exact", head: true }).is("deleted_at", null),
     supabase.from("leads").select("id", { count: "exact", head: true })
       .gte("next_follow_up_at", start).lte("next_follow_up_at", end),
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "won"),
+    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "lost"),
+    // RLS (private.referral_lead_owned_by_me) zaten bu sorguyu çağıranın
+    // kendi leadlerine ait referral'larla sınırlıyor.
+    supabase.from("partner_referrals").select("id", { count: "exact", head: true })
+      .eq("status", "pending").lt("response_due_at", new Date().toISOString()),
   ]);
+
+  const wonCount = won ?? 0;
+  const lostCount = lost ?? 0;
 
   return {
     total: total ?? 0,
     dueToday: dueToday ?? 0,
+    won: wonCount,
+    lost: lostCount,
+    conversionRate: wonCount + lostCount > 0 ? Math.round((wonCount / (wonCount + lostCount)) * 100) : 0,
+    overduePartner: overduePartner ?? 0,
   };
 }
 

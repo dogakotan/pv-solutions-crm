@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Users, UserPlus } from "lucide-react";
+import { Users, UserPlus, Trophy, XCircle, TrendingUp, AlertTriangle } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
 import { TodayActionsCard } from "@/components/today-actions-card";
 import { LeadsTable } from "@/components/leads-table";
-import type { LeadListItem } from "@/lib/data/leads";
+import type { LeadListItem, getSalesLeadKpis } from "@/lib/data/leads";
 import type { ActivityFeedItem } from "@/lib/data/activities";
 
 const TABS = [
@@ -23,11 +23,11 @@ type TabKey = (typeof TABS)[number]["key"];
  * "işleme alındı" bayrağına gerek yok.
  */
 export function MyLeadsTabs({
-  totalCount,
+  kpis,
   leads,
   todayActivities,
 }: {
-  totalCount: number;
+  kpis: Awaited<ReturnType<typeof getSalesLeadKpis>>;
   leads: LeadListItem[];
   todayActivities: ActivityFeedItem[];
 }) {
@@ -58,9 +58,26 @@ export function MyLeadsTabs({
       {activeTab === "genel" && (
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-            <StatCard icon={Users} label="Toplam Lead" value={String(totalCount)} />
+            <StatCard icon={Users} label="Toplam Lead" value={String(kpis.total)} />
             <StatCard icon={UserPlus} label="Yeni Lead" value={String(newLeads.length)} />
             <TodayActionsCard activities={todayActivities} className="sm:col-span-2" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+            <StatCard icon={Trophy} label="Kazanılan" value={String(kpis.won)} iconClassName="bg-green-50 text-green-700" />
+            <StatCard icon={XCircle} label="Kaybedilen" value={String(kpis.lost)} iconClassName="bg-red-50 text-red-700" />
+            <StatCard
+              icon={TrendingUp}
+              label="Dönüşüm Oranı"
+              value={`%${kpis.conversionRate}`}
+              iconClassName="bg-brand-light text-brand"
+            />
+            <StatCard
+              icon={AlertTriangle}
+              label="Partner Yanıtı Gecikmiş"
+              value={String(kpis.overduePartner)}
+              iconClassName={kpis.overduePartner > 0 ? "bg-red-50 text-red-700" : undefined}
+            />
           </div>
 
           <div>

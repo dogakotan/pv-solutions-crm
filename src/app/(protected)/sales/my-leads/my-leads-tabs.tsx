@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Users, UserPlus, Trophy, XCircle, TrendingUp, AlertTriangle } from "lucide-react";
+import { Users, UserPlus, TrendingUp, AlertTriangle } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
 import { TodayActionsCard } from "@/components/today-actions-card";
 import { LeadsTable } from "@/components/leads-table";
@@ -63,9 +63,7 @@ export function MyLeadsTabs({
             <TodayActionsCard activities={todayActivities} className="sm:col-span-2" />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-            <StatCard icon={Trophy} label="Kazanılan" value={String(kpis.won)} iconClassName="bg-green-50 text-green-700" />
-            <StatCard icon={XCircle} label="Kaybedilen" value={String(kpis.lost)} iconClassName="bg-red-50 text-red-700" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <StatCard
               icon={TrendingUp}
               label="Dönüşüm Oranı"

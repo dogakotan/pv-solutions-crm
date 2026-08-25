@@ -214,6 +214,7 @@ export async function assignPartner(formData: FormData) {
   if (error) throw error;
 
   revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/sales/my-leads");
 }
 
 export type OfferFormState = {
@@ -533,7 +534,7 @@ export async function recordSalesOutcome(
   }
 
   revalidatePath(`/leads/${leadId}`);
-  revalidatePath("/sales/pipeline");
+  revalidatePath("/sales/my-leads");
   revalidatePath("/leads");
   return {};
 }

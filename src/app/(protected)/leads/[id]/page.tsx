@@ -18,14 +18,15 @@ import { getActivitiesForLead, getAcceptedReferralForLead } from "@/lib/data/act
 import { getSalesOutcomeForLead } from "@/lib/data/sales-outcomes";
 import { getOfferVersionsForLead, getOfferHistoryForLead } from "@/lib/data/offers";
 import { getRecommendedPartnersForLead } from "@/lib/data/partners";
-import { LeadStageBadge, LeadScoreBadge, ReferralStatusBadge } from "@/components/lead-badges";
+import { LeadStageBadge, LeadScoreBadge, ReferralStatusBadge, STAGE_STYLES } from "@/components/lead-badges";
 import { ActivityTypeBadge, ActivityVisibilityBadge } from "@/components/activity-badges";
 import { OfferVersionRow } from "@/components/offer-version-row";
+import { NEXT_STAGE } from "@/types/lead";
 import { ActivityForm } from "./activity-form";
 import { SalesOutcomeForm } from "./sales-outcome-form";
 import { OfferForm } from "./offer-form";
 import { QualificationForm } from "./qualification-form";
-import { assignPartner, deleteOfferVersion, softDeleteLead } from "./actions";
+import { assignPartner, advanceLeadStage, deleteOfferVersion, softDeleteLead } from "./actions";
 import { DeleteLeadButton } from "./delete-lead-button";
 import { INTEREST_OPTIONS } from "@/components/lead-qualification-fields";
 
@@ -59,8 +60,11 @@ export default async function LeadDetailPage({
 
   // assign_lead_to_partner RPC'si yalnızca pv_admin veya lead'in sales
   // sahibi pv_sales'i kabul ediyor — first_call için ne aktif atama
-  // sorgulamaya ne de öneri listesine gerek var.
+  // sorgulamaya ne de öneri listesine gerek var. Aşamayı manuel ilerletme
+  // de aynı yetki sınırına tabi (leads_update_pv RLS'i first_call'a
+  // stage dışındaki alanlar için zaten farklı bir yoldan izin veriyor).
   const canAssignPartner = appRole === "admin" || appRole === "sales";
+  const canAdvanceStage = canAssignPartner;
 
   // Nitelendirme alanlarını (puan, ilgi, teknik detay) yalnızca lead'i
   // arayan first_call ve pv_admin düzenleyebilir — sales için salt-okunur
@@ -86,6 +90,8 @@ export default async function LeadDetailPage({
     notFound();
   }
 
+  const nextStage = NEXT_STAGE[lead.stage];
+
   return (
     <div className="flex flex-col gap-6">
       <BackLink fallbackHref={getDefaultRouteForRole(appRole)} label="Geri" />
@@ -101,6 +107,18 @@ export default async function LeadDetailPage({
           <div className="flex shrink-0 items-center gap-2">
             <LeadStageBadge stage={lead.stage} />
             <LeadScoreBadge score={lead.leadScore} />
+            {canAdvanceStage && nextStage && (
+              <form action={advanceLeadStage}>
+                <input type="hidden" name="leadId" value={lead.id} />
+                <input type="hidden" name="currentStage" value={lead.stage} />
+                <button
+                  type="submit"
+                  className="whitespace-nowrap rounded-lg border border-card-border px-3 py-1.5 text-xs hover:bg-background"
+                >
+                  İlerlet: {STAGE_STYLES[nextStage].label} →
+                </button>
+              </form>
+            )}
             {appRole === "admin" && <DeleteLeadButton leadId={lead.id} deleteAction={softDeleteLead} />}
           </div>
         </div>

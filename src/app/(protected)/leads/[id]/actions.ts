@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getVerifiedUserId } from "@/lib/auth/current-user";
 import type { ActivityType } from "@/types/activity";
+import { NEXT_STAGE, type LeadStage } from "@/types/lead";
 import {
   INTEREST_VALUES,
   COMPETITOR_STATUS_VALUES,
@@ -215,6 +216,33 @@ export async function assignPartner(formData: FormData) {
 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/sales/my-leads");
+}
+
+/**
+ * leads_update_pv RLS'i (pv_admin her lead'i, pv_sales yalnızca kendi
+ * sahiplendiği lead'i) ve `stage` kolonunun protected_columns listesinde
+ * olmaması sayesinde düz bir UPDATE yeterli — bkz.
+ * lead_protected_columns_and_assignment_rpc migration'ı. DB aşama
+ * sırasını doğrulamadığı için (yalnızca enum whitelist'i var) hedef
+ * aşama burada NEXT_STAGE tablosundaki tek olası değerle sınırlanıyor,
+ * formdan gelen keyfi bir stage değeri kabul edilmiyor.
+ */
+export async function advanceLeadStage(formData: FormData) {
+  const leadId = String(formData.get("leadId") ?? "");
+  const currentStage = String(formData.get("currentStage") ?? "") as LeadStage;
+  const nextStage = NEXT_STAGE[currentStage];
+
+  if (!leadId || !nextStage) {
+    throw new Error("Geçersiz istek.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("leads").update({ stage: nextStage }).eq("id", leadId);
+  if (error) throw error;
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/sales/my-leads");
+  revalidatePath("/leads");
 }
 
 export type OfferFormState = {

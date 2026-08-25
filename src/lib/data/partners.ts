@@ -374,6 +374,58 @@ export async function getOpenReferralsForPartner(
   });
 }
 
+export type PartnerActivityItem = {
+  id: string;
+  status: PartnerReferralStatus;
+  updatedAt: string;
+  partnerId: string;
+  partnerName: string;
+  leadId: string;
+  leadNo: string;
+  customerName: string;
+};
+
+type PartnerNameEmbed = { name: string } | { name: string }[] | null;
+
+function extractPartnerName(embed: PartnerNameEmbed): string {
+  if (!embed) return "—";
+  const row = Array.isArray(embed) ? embed[0] : embed;
+  return row?.name ?? "—";
+}
+
+/**
+ * Partnerler > Genel sekmesindeki "Partner Aktiviteleri" akışı için —
+ * tüm partnerlere yönelik son yönlendirme olayları (gönderildi/kabul/
+ * red/tamamlandı/süresi doldu), en son güncellenene göre sıralı.
+ */
+export async function getRecentPartnerActivity(
+  supabase: TypedSupabaseClient,
+  limit = 20
+): Promise<PartnerActivityItem[]> {
+  const { data, error } = await supabase
+    .from("partner_referrals")
+    .select("id, status, updated_at, partner_id, lead_id, partners(name), leads(lead_no, customer_name, city)")
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return (data ?? []).flatMap((row) => {
+    const lead = extractReferralLead(row.leads as ReferralLeadEmbed);
+    if (!lead) return [];
+    return [{
+      id: row.id,
+      status: row.status as PartnerReferralStatus,
+      updatedAt: row.updated_at,
+      partnerId: row.partner_id,
+      partnerName: extractPartnerName(row.partners as PartnerNameEmbed),
+      leadId: row.lead_id,
+      leadNo: lead.lead_no,
+      customerName: lead.customer_name,
+    }];
+  });
+}
+
 export async function getPartnerEmployees(
   supabase: TypedSupabaseClient,
   partnerId: string

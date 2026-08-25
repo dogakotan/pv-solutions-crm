@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/require-role";
-import { getPartners } from "@/lib/data/partners";
+import { getPartners, getRecentPartnerActivity } from "@/lib/data/partners";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { PartnersOverviewTabs } from "./partners-overview-tabs";
 
@@ -43,7 +43,10 @@ export default async function PartnersPage() {
 
 async function PartnersContent() {
   const supabase = await createClient();
-  const partners = await getPartners(supabase);
+  const [partners, recentActivity] = await Promise.all([
+    getPartners(supabase),
+    getRecentPartnerActivity(supabase),
+  ]);
 
-  return <PartnersOverviewTabs partners={partners} />;
+  return <PartnersOverviewTabs partners={partners} recentActivity={recentActivity} />;
 }

@@ -17,27 +17,37 @@ export function PartnerActivityCard({ activity }: { activity: PartnerActivityIte
       </div>
 
       {activity.length > 0 ? (
-        <div className="mt-4 flex max-h-80 flex-col gap-2 overflow-y-auto border-t border-card-border pt-4">
-          {activity.map((item) => (
-            <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
-              <div className="flex min-w-0 items-center gap-2">
+        <div className="mt-4 border-t border-card-border">
+          <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7.5rem_5.5rem] gap-3 pt-3 text-[10px] font-medium uppercase tracking-wide text-muted">
+            <span>Partner</span>
+            <span>Lead</span>
+            <span>Durum</span>
+            <span className="text-right">Tarih</span>
+          </div>
+          <div className="flex max-h-80 flex-col overflow-y-auto">
+            {activity.map((item) => (
+              <div
+                key={item.id}
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7.5rem_5.5rem] items-center gap-3 border-b border-card-border py-2.5 text-xs last:border-0"
+              >
                 <span className="truncate font-medium text-foreground">{item.partnerName}</span>
-                <span className="text-muted">→</span>
                 <Link href={`/leads/${item.leadId}`} className="truncate text-brand hover:underline">
                   {item.customerName}
                 </Link>
-                <ReferralStatusBadge status={item.status} />
+                <span>
+                  <ReferralStatusBadge status={item.status} />
+                </span>
+                <span className="whitespace-nowrap text-right text-muted">
+                  {new Date(item.updatedAt).toLocaleString("tr-TR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
               </div>
-              <span className="whitespace-nowrap text-muted">
-                {new Date(item.updatedAt).toLocaleString("tr-TR", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       ) : (
         <p className="mt-4 border-t border-card-border pt-4 text-xs text-muted">

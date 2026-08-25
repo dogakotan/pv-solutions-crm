@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Menu, X, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Logo } from "@/components/logo";
 
@@ -14,6 +14,25 @@ type SidebarContextValue = {
 
 const SidebarContext = createContext<SidebarContextValue | null>(null);
 
+const noopSubscribe = () => () => {};
+
+/**
+ * `collapsed` başlangıçta her zaman false, ama onu okuyan bileşenler
+ * (title/className/children farklılaşıyor) ilk client render'ında
+ * sunucudakiyle bire bir aynı çıktıyı üretmeli — aksi halde React
+ * hydration mismatch'e düşer. useSyncExternalStore'un server/client
+ * snapshot ayrımı bunu yapısal olarak garanti eder: sunucuda ve ilk
+ * client boyamasında hep false, mount SONRASI true olur (setState'i
+ * bir effect içinde çağırmadan — bkz. react-hooks/set-state-in-effect).
+ */
+function useIsHydrated(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false
+  );
+}
+
 /**
  * Sidebar'ın açık/kapalı (mobil drawer) ve daraltılmış/geniş (masaüstü
  * ikon-rayı) durumu burada, layout'un header'ı ile aside'ı arasında
@@ -24,6 +43,7 @@ const SidebarContext = createContext<SidebarContextValue | null>(null);
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const hydrated = useIsHydrated();
 
   return (
     <SidebarContext.Provider
@@ -31,7 +51,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
         mobileOpen,
         openMobile: () => setMobileOpen(true),
         closeMobile: () => setMobileOpen(false),
-        collapsed,
+        collapsed: hydrated ? collapsed : false,
         toggleCollapsed: () => setCollapsed((c) => !c),
       }}
     >

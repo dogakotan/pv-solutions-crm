@@ -11,6 +11,7 @@ import {
   getLeadStageHistory,
   getAssignedPartnerNameForLead,
   getActiveReferralForLead,
+  type LeadStageHistoryItem,
 } from "@/lib/data/leads";
 import { getActivitiesForLead, getAcceptedReferralForLead } from "@/lib/data/activities";
 import { getSalesOutcomeForLead } from "@/lib/data/sales-outcomes";
@@ -90,9 +91,9 @@ export default async function LeadDetailPage({
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">{lead.leadNo}</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{lead.customerName}</h1>
           <p className="text-sm text-muted">
-            {lead.customerName} — {lead.city}
+            {lead.leadNo} — {lead.city}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -243,21 +244,28 @@ async function PartnerAtamaCard({
 }) {
   const supabase = await createClient();
   const activeReferral = await getActiveReferralForLead(supabase, leadId);
-  const recommendedPartners = activeReferral
-    ? []
-    : await getRecommendedPartnersForLead(supabase, { city, district });
+  const [recommendedPartners, stageHistory] = await Promise.all([
+    activeReferral ? Promise.resolve([]) : getRecommendedPartnersForLead(supabase, { city, district }),
+    activeReferral ? getLeadStageHistory(supabase, leadId) : Promise.resolve([]),
+  ]);
 
   return (
     <div className={CARD_CLASS}>
-      <h2 className="mb-4 text-sm font-medium text-foreground">Partner Ataması</h2>
+      <h2 className="mb-4 text-sm font-medium text-foreground">
+        {activeReferral ? "Partner Aktivitesi" : "Partner Ataması"}
+      </h2>
 
       {activeReferral ? (
-        <div className="flex items-center justify-between gap-4 text-sm">
-          <div>
-            <p className="text-muted">Atanan Partner</p>
-            <p className="font-medium text-foreground">{activeReferral.partnerName}</p>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-4 text-sm">
+            <div>
+              <p className="text-muted">Atanan Partner</p>
+              <p className="font-medium text-foreground">{activeReferral.partnerName}</p>
+            </div>
+            <ReferralStatusBadge status={activeReferral.status} />
           </div>
-          <ReferralStatusBadge status={activeReferral.status} />
+
+          <StageHistoryList items={stageHistory} className="max-h-72 overflow-y-auto pr-1" />
         </div>
       ) : recommendedPartners.length === 0 ? (
         <p className="text-sm text-muted">Bu lead için semt/şehre uygun aktif partner bulunamadı.</p>
@@ -470,28 +478,38 @@ async function SurecGecmisiCard({ leadId }: { leadId: string }) {
   return (
     <div className={CARD_CLASS}>
       <h2 className="mb-4 text-sm font-medium text-foreground">Süreç Geçmişi</h2>
+      <StageHistoryList items={stageHistory} />
+    </div>
+  );
+}
 
-      {stageHistory.length === 0 ? (
-        <p className="text-sm text-muted">Bu lead için henüz bir aşama değişikliği kaydedilmemiş.</p>
-      ) : (
-        <div className="flex flex-col gap-3">
-          {stageHistory.map((entry) => (
-            <div
-              key={entry.id}
-              className="flex flex-col gap-2 rounded-xl border border-card-border p-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="flex items-center gap-2 text-sm">
-                {entry.fromStage ? <LeadStageBadge stage={entry.fromStage} /> : <span className="text-xs text-muted">—</span>}
-                <span className="text-muted">→</span>
-                <LeadStageBadge stage={entry.toStage} />
-              </div>
-              <p className="text-xs text-muted">
-                {entry.changedByName ?? "Sistem"} — {new Date(entry.changedAt).toLocaleString("tr-TR")}
-              </p>
-            </div>
-          ))}
+/**
+ * Partner Aktivitesi kartı (partner atandıktan sonra) ve Süreç Geçmişi
+ * kartı aynı aşama-geçiş zaman çizelgesini gösterir — tek yerde tutulur,
+ * yalnızca kaydırma davranışı `className` ile kart bazında farklılaşır.
+ */
+function StageHistoryList({ items, className }: { items: LeadStageHistoryItem[]; className?: string }) {
+  if (items.length === 0) {
+    return <p className="text-sm text-muted">Bu lead için henüz bir aşama değişikliği kaydedilmemiş.</p>;
+  }
+
+  return (
+    <div className={`flex flex-col gap-3 ${className ?? ""}`}>
+      {items.map((entry) => (
+        <div
+          key={entry.id}
+          className="flex flex-col gap-2 rounded-xl border border-card-border p-3 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-center gap-2 text-sm">
+            {entry.fromStage ? <LeadStageBadge stage={entry.fromStage} /> : <span className="text-xs text-muted">—</span>}
+            <span className="text-muted">→</span>
+            <LeadStageBadge stage={entry.toStage} />
+          </div>
+          <p className="text-xs text-muted">
+            {entry.changedByName ?? "Sistem"} — {new Date(entry.changedAt).toLocaleString("tr-TR")}
+          </p>
         </div>
-      )}
+      ))}
     </div>
   );
 }

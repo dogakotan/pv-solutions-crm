@@ -32,7 +32,7 @@ export function getDefaultRouteForRole(role: AppRole): string {
     case "first_call":
       return "/first-call/lead-pool";
     case "sales":
-      return "/sales";
+      return "/sales/my-leads";
     case "partner":
       return "/partner/assigned-leads";
   }

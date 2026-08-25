@@ -3,11 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { getSalesLeadKpis, getVisibleLeads } from "@/lib/data/leads";
 import { getActivitiesDueInRange } from "@/lib/data/activities";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { MyLeadsTabs } from "./my-leads-tabs";
 
 export default function SalesMyLeadsPage() {
   return (
     <div className="flex flex-col gap-6">
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Leadlerim</h1>
+      </SetHeaderContent>
+
       <Suspense
         fallback={
           <div className="flex flex-col gap-6">

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/require-role";
 import { getDefaultRouteForRole, type AppRole } from "@/lib/auth/roles";
 import { BackLink } from "@/components/back-link";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { CardSkeleton } from "@/components/skeletons";
 import {
   getLeadById,
@@ -89,19 +90,21 @@ export default async function LeadDetailPage({
     <div className="flex flex-col gap-6">
       <BackLink fallbackHref={getDefaultRouteForRole(appRole)} label="Geri" />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">{lead.customerName}</h1>
-          <p className="text-sm text-muted">
-            {lead.leadNo} — {lead.city}
-          </p>
+      <SetHeaderContent>
+        <div className="flex min-w-0 items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold text-foreground">{lead.customerName}</h1>
+            <p className="truncate text-xs text-muted">
+              {lead.leadNo} — {lead.city}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <LeadStageBadge stage={lead.stage} />
+            <LeadScoreBadge score={lead.leadScore} />
+            {appRole === "admin" && <DeleteLeadButton leadId={lead.id} deleteAction={softDeleteLead} />}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <LeadStageBadge stage={lead.stage} />
-          <LeadScoreBadge score={lead.leadScore} />
-          {appRole === "admin" && <DeleteLeadButton leadId={lead.id} deleteAction={softDeleteLead} />}
-        </div>
-      </div>
+      </SetHeaderContent>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className={CARD_CLASS}>

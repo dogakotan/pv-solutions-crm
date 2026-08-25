@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { SidebarProvider, SidebarFrame, MobileMenuButton } from "@/components/sidebar-shell";
-import { HeaderPageTitle } from "@/components/header-page-title";
+import { HeaderPageSlot } from "@/components/page-header-slot";
 import { getCurrentUserRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import { getUnreadNotificationCount } from "@/lib/data/notifications";
@@ -46,9 +46,9 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-between gap-4 border-b border-card-border bg-card px-4 py-4 sm:px-6">
-            <div className="flex min-w-0 items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <MobileMenuButton />
-              <HeaderPageTitle />
+              <HeaderPageSlot />
             </div>
             <div className="flex items-center gap-4">
               <Suspense fallback={<NotificationBellSkeleton />}>

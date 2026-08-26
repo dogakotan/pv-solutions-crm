@@ -13,7 +13,7 @@ import {
   optionalEnum,
 } from "@/lib/validation/lead-qualification";
 
-export type DuplicateLeadMatch = {
+type DuplicateLeadMatch = {
   id: string;
   leadNo: string;
   customerName: string;

@@ -101,7 +101,7 @@ function extractOwnerName(embed: OwnerEmbed): string {
   return owner?.full_name || "—";
 }
 
-export type WonAmountByCurrency = { currency: string; amount: number };
+type WonAmountByCurrency = { currency: string; amount: number };
 
 export type SalespersonPerformanceItem = {
   salesUserId: string;

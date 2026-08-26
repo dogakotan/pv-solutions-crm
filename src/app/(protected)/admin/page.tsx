@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import { Users, UserPlus, PhoneCall, Handshake, AlertTriangle, ClipboardList, FileText, Trophy, XCircle, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/stat-card";
-import { KpiGridSkeleton } from "@/components/skeletons";
-import { getAdminLeadKpis } from "@/lib/data/leads";
+import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
+import { getAdminLeadKpis, getAdminActionItems } from "@/lib/data/leads";
+import { AdminActionItemsTable } from "./admin-action-items-table";
 
 export default function AdminDashboardPage() {
   return (
@@ -14,12 +15,26 @@ export default function AdminDashboardPage() {
         <AdminKpiGrid />
       </Suspense>
 
+      <div>
+        <h2 className="mb-3 text-sm font-medium text-foreground">Aksiyon Gerektirenler</h2>
+        <Suspense fallback={<TableSkeleton rows={6} />}>
+          <AdminActionItemsSection />
+        </Suspense>
+      </div>
+
       <p className="text-xs text-muted">
         Satış çalışanı ve partner performans kırılımları (kişi bazlı), yeterli veri
         birikince ayrı bir raporlama geçişinde eklenecek.
       </p>
     </div>
   );
+}
+
+async function AdminActionItemsSection() {
+  const supabase = await createClient();
+  const items = await getAdminActionItems(supabase);
+
+  return <AdminActionItemsTable items={items} />;
 }
 
 async function AdminKpiGrid() {

@@ -70,6 +70,57 @@ export async function getVisibleOffers(supabase: TypedSupabaseClient, limit = 50
   });
 }
 
+export type OfferOverviewItem = OfferListItem & {
+  amount: number | null;
+  currency: string | null;
+  nextActionAt: string | null;
+};
+
+/**
+ * Teklifler > Genel/Teklif Listesi sayfaları için — her teklife en son
+ * revizyonun tutarı ve geçerlilik tarihini ("sonraki aksiyon tarihi"
+ * olarak kullanılıyor) ekler. offer_versions tek başına teklif listesine
+ * gömülü olmadığı için getOffersForPartner'daki aynı iki-sorgulu desen
+ * kullanılıyor.
+ */
+export async function getOffersOverview(supabase: TypedSupabaseClient, limit = 500): Promise<OfferOverviewItem[]> {
+  const offers = await getVisibleOffers(supabase, limit);
+  const offerIds = offers.map((o) => o.id);
+
+  const latestByOffer = new Map<string, { amount: number; currency: string; revisionNo: number; validUntil: string | null }>();
+
+  if (offerIds.length > 0) {
+    const { data: versions, error: versionsError } = await supabase
+      .from("offer_versions")
+      .select("offer_id, amount, currency, revision_no, valid_until")
+      .in("offer_id", offerIds);
+
+    if (versionsError) throw versionsError;
+
+    for (const v of versions ?? []) {
+      const current = latestByOffer.get(v.offer_id);
+      if (!current || v.revision_no > current.revisionNo) {
+        latestByOffer.set(v.offer_id, {
+          amount: v.amount,
+          currency: v.currency,
+          revisionNo: v.revision_no,
+          validUntil: v.valid_until,
+        });
+      }
+    }
+  }
+
+  return offers.map((o) => {
+    const latest = latestByOffer.get(o.id);
+    return {
+      ...o,
+      amount: latest?.amount ?? null,
+      currency: latest?.currency ?? null,
+      nextActionAt: latest?.validUntil ?? null,
+    };
+  });
+}
+
 export type PartnerOfferItem = OfferListItem & {
   latestAmount: number | null;
   latestCurrency: string | null;

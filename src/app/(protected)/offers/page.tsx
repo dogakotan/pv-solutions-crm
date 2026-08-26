@@ -1,15 +1,22 @@
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { getVisibleOffers } from "@/lib/data/offers";
-import { TableSkeleton } from "@/components/skeletons";
-import { OffersTable } from "./offers-table";
+import { getOffersOverview } from "@/lib/data/offers";
+import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
+import { OffersOverviewTabs } from "./offers-overview-tabs";
 
 export default function OffersPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-2xl font-semibold text-foreground">Teklifler</h1>
 
-      <Suspense fallback={<TableSkeleton rows={8} />}>
+      <Suspense
+        fallback={
+          <div className="flex flex-col gap-6">
+            <KpiGridSkeleton count={3} className="grid grid-cols-1 gap-4 sm:grid-cols-3" />
+            <TableSkeleton rows={8} />
+          </div>
+        }
+      >
         <OffersContent />
       </Suspense>
     </div>
@@ -18,15 +25,7 @@ export default function OffersPage() {
 
 async function OffersContent() {
   const supabase = await createClient();
-  const offers = await getVisibleOffers(supabase, 200);
+  const offers = await getOffersOverview(supabase, 500);
 
-  if (offers.length === 0) {
-    return (
-      <div className="rounded-2xl border border-card-border bg-card p-12 text-center text-sm text-muted shadow-sm">
-        Görüntülenecek teklif bulunamadı.
-      </div>
-    );
-  }
-
-  return <OffersTable offers={offers} />;
+  return <OffersOverviewTabs offers={offers} />;
 }

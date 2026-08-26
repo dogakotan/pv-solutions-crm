@@ -11,7 +11,7 @@ const VALID_STATUSES: OfferStatus[] = ["open", "accepted", "rejected", "closed"]
  * Yetkilendirme: ekstra bir rol kontrolüne gerek yok — RLS zaten offers'ın
  * görünürlüğünü offers_select politikası üzerinden sınırlıyor (bkz.
  * getVisibleOffers), bu route yalnızca zaten görebileceği teklifleri
- * Excel'e çeviriyor. q/status filtreleri OffersTable'daki client-side
+ * Excel'e çeviriyor. q/status filtreleri OffersListFilters'daki client-side
  * filtreyle birebir aynı mantığı server tarafında tekrarlıyor.
  */
 export async function GET(request: Request) {

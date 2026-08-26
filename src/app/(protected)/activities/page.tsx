@@ -7,23 +7,23 @@ import { EmptyState } from "@/components/empty-state";
 import { TableSkeleton } from "@/components/skeletons";
 import { ListChecks } from "lucide-react";
 import { ActivitiesList } from "./activities-list";
-import { WeeklyAgenda } from "./weekly-agenda";
-import { addDays, parseWeekParam } from "./week-utils";
+import { MonthlyCalendar } from "./monthly-calendar";
+import { addDays, getMonthGrid, parseMonthParam } from "./calendar-utils";
 
 const TABS = [
-  { key: "agenda", label: "Ajanda" },
+  { key: "month", label: "Takvim" },
   { key: "list", label: "Tüm Aktiviteler" },
 ] as const;
 
 export default async function ActivitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; week?: string }>;
+  searchParams: Promise<{ view?: string; month?: string }>;
 }) {
   const { appRole } = await getCurrentUserRole();
   const supabase = await createClient();
-  const { view: viewParam, week: weekParam } = await searchParams;
-  const view = viewParam === "list" ? "list" : "agenda";
+  const { view: viewParam, month: monthParam } = await searchParams;
+  const view = viewParam === "list" ? "list" : "month";
 
   // Lead detay sayfası (/leads/[id]) yalnızca admin/first_call/sales'e açık
   // (internal_notes/phone gibi partnere hiç gösterilmemesi gereken alanlar
@@ -32,7 +32,7 @@ export default async function ActivitiesPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Aktiviteler</h1>
+      <h1 className="text-2xl font-semibold text-foreground">Takvim</h1>
 
       <div className="flex gap-1 border-b border-card-border">
         {TABS.map((tab) => (
@@ -50,9 +50,9 @@ export default async function ActivitiesPage({
         ))}
       </div>
 
-      {view === "agenda" ? (
+      {view === "month" ? (
         <Suspense fallback={<TableSkeleton rows={6} />}>
-          <WeeklyAgendaSection supabase={supabase} weekParam={weekParam} canOpenLead={canOpenLead} />
+          <MonthlyCalendarSection supabase={supabase} monthParam={monthParam} canOpenLead={canOpenLead} />
         </Suspense>
       ) : (
         <Suspense fallback={<TableSkeleton rows={8} />}>
@@ -63,20 +63,22 @@ export default async function ActivitiesPage({
   );
 }
 
-async function WeeklyAgendaSection({
+async function MonthlyCalendarSection({
   supabase,
-  weekParam,
+  monthParam,
   canOpenLead,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
-  weekParam?: string;
+  monthParam?: string;
   canOpenLead: boolean;
 }) {
-  const weekStart = parseWeekParam(weekParam);
-  const weekEnd = addDays(weekStart, 7);
-  const activities = await getActivitiesDueInRange(supabase, weekStart.toISOString(), weekEnd.toISOString());
+  const monthStart = parseMonthParam(monthParam);
+  const grid = getMonthGrid(monthStart);
+  const gridStart = grid[0];
+  const gridEnd = addDays(grid[grid.length - 1], 1);
+  const activities = await getActivitiesDueInRange(supabase, gridStart.toISOString(), gridEnd.toISOString());
 
-  return <WeeklyAgenda activities={activities} weekStart={weekStart} canOpenLead={canOpenLead} />;
+  return <MonthlyCalendar activities={activities} monthStart={monthStart} canOpenLead={canOpenLead} />;
 }
 
 async function ActivitiesListSection({

@@ -8,22 +8,29 @@ import { TableSkeleton } from "@/components/skeletons";
 import { ListChecks } from "lucide-react";
 import { ActivitiesList } from "./activities-list";
 import { MonthlyCalendar } from "./monthly-calendar";
-import { addDays, getMonthGrid, parseMonthParam } from "./calendar-utils";
+import { WeeklyAgenda } from "./weekly-agenda";
+import { addDays, getMonthGrid, parseMonthParam, parseWeekParam } from "./calendar-utils";
 
 const TABS = [
-  { key: "month", label: "Takvim" },
+  { key: "calendar", label: "Takvim" },
   { key: "list", label: "Tüm Aktiviteler" },
+] as const;
+
+const CALENDAR_MODES = [
+  { key: "week", label: "Haftalık" },
+  { key: "month", label: "Aylık" },
 ] as const;
 
 export default async function ActivitiesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; month?: string }>;
+  searchParams: Promise<{ view?: string; mode?: string; week?: string; month?: string }>;
 }) {
   const { appRole } = await getCurrentUserRole();
   const supabase = await createClient();
-  const { view: viewParam, month: monthParam } = await searchParams;
-  const view = viewParam === "list" ? "list" : "month";
+  const { view: viewParam, mode: modeParam, week: weekParam, month: monthParam } = await searchParams;
+  const view = viewParam === "list" ? "list" : "calendar";
+  const mode = modeParam === "month" ? "month" : "week";
 
   // Lead detay sayfası (/leads/[id]) yalnızca admin/first_call/sales'e açık
   // (internal_notes/phone gibi partnere hiç gösterilmemesi gereken alanlar
@@ -50,10 +57,34 @@ export default async function ActivitiesPage({
         ))}
       </div>
 
-      {view === "month" ? (
-        <Suspense fallback={<TableSkeleton rows={6} />}>
-          <MonthlyCalendarSection supabase={supabase} monthParam={monthParam} canOpenLead={canOpenLead} />
-        </Suspense>
+      {view === "calendar" ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex gap-1 self-start rounded-lg border border-card-border p-1">
+            {CALENDAR_MODES.map((m) => (
+              <Link
+                key={m.key}
+                href={`/activities?view=calendar&mode=${m.key}`}
+                className={
+                  mode === m.key
+                    ? "rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white"
+                    : "rounded-md px-3 py-1.5 text-xs text-muted hover:text-foreground"
+                }
+              >
+                {m.label}
+              </Link>
+            ))}
+          </div>
+
+          {mode === "week" ? (
+            <Suspense fallback={<TableSkeleton rows={6} />}>
+              <WeeklyAgendaSection supabase={supabase} weekParam={weekParam} canOpenLead={canOpenLead} />
+            </Suspense>
+          ) : (
+            <Suspense fallback={<TableSkeleton rows={6} />}>
+              <MonthlyCalendarSection supabase={supabase} monthParam={monthParam} canOpenLead={canOpenLead} />
+            </Suspense>
+          )}
+        </div>
       ) : (
         <Suspense fallback={<TableSkeleton rows={8} />}>
           <ActivitiesListSection supabase={supabase} canOpenLead={canOpenLead} />
@@ -61,6 +92,22 @@ export default async function ActivitiesPage({
       )}
     </div>
   );
+}
+
+async function WeeklyAgendaSection({
+  supabase,
+  weekParam,
+  canOpenLead,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  weekParam?: string;
+  canOpenLead: boolean;
+}) {
+  const weekStart = parseWeekParam(weekParam);
+  const weekEnd = addDays(weekStart, 7);
+  const activities = await getActivitiesDueInRange(supabase, weekStart.toISOString(), weekEnd.toISOString());
+
+  return <WeeklyAgenda activities={activities} weekStart={weekStart} canOpenLead={canOpenLead} />;
 }
 
 async function MonthlyCalendarSection({

@@ -26,8 +26,8 @@ export function MonthlyCalendar({
   const isCurrentMonth =
     monthStart.getFullYear() === today.getFullYear() && monthStart.getMonth() === today.getMonth();
 
-  const prevMonthHref = `/activities?view=month&month=${toMonthParam(addMonths(monthStart, -1))}`;
-  const nextMonthHref = `/activities?view=month&month=${toMonthParam(addMonths(monthStart, 1))}`;
+  const prevMonthHref = `/activities?view=calendar&mode=month&month=${toMonthParam(addMonths(monthStart, -1))}`;
+  const nextMonthHref = `/activities?view=calendar&mode=month&month=${toMonthParam(addMonths(monthStart, 1))}`;
 
   return (
     <div className="flex flex-col gap-4">
@@ -52,7 +52,7 @@ export function MonthlyCalendar({
 
         {!isCurrentMonth && (
           <Link
-            href="/activities?view=month"
+            href="/activities?view=calendar&mode=month"
             className="rounded-lg border border-card-border px-3 py-1.5 text-sm hover:bg-background"
           >
             Bu ay

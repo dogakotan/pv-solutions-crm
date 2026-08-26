@@ -17,7 +17,6 @@ export default function SalesMyLeadsPage() {
         fallback={
           <div className="flex flex-col gap-6">
             <KpiGridSkeleton count={3} className="grid grid-cols-1 gap-4 sm:grid-cols-4 [&>*:last-child]:sm:col-span-2" />
-            <KpiGridSkeleton count={4} />
             <TableSkeleton rows={8} />
           </div>
         }

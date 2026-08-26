@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Users, UserPlus, TrendingUp, AlertTriangle } from "lucide-react";
+import { Users, UserPlus } from "lucide-react";
 import { StatCard } from "@/components/stat-card";
 import { TodayActionsCard } from "@/components/today-actions-card";
 import { LeadsTable } from "@/components/leads-table";
@@ -61,21 +61,6 @@ export function MyLeadsTabs({
             <StatCard icon={Users} label="Toplam Lead" value={String(kpis.total)} />
             <StatCard icon={UserPlus} label="Yeni Lead" value={String(newLeads.length)} />
             <TodayActionsCard activities={todayActivities} className="sm:col-span-2" />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <StatCard
-              icon={TrendingUp}
-              label="Dönüşüm Oranı"
-              value={`%${kpis.conversionRate}`}
-              iconClassName="bg-brand-light text-brand"
-            />
-            <StatCard
-              icon={AlertTriangle}
-              label="Partner Yanıtı Gecikmiş"
-              value={String(kpis.overduePartner)}
-              iconClassName={kpis.overduePartner > 0 ? "bg-red-50 text-red-700" : undefined}
-            />
           </div>
 
           <div>

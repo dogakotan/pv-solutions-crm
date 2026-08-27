@@ -5,6 +5,7 @@ import { getDefaultRouteForRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { getSalesLeadKpis, getVisibleLeads } from "@/lib/data/leads";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { LeadsOverviewTabs } from "./leads-overview-tabs";
 
 /**
@@ -24,7 +25,9 @@ export default async function LeadsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Leadler</h1>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Leadler</h1>
+      </SetHeaderContent>
 
       <Suspense
         fallback={

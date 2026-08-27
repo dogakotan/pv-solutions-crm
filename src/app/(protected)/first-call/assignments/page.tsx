@@ -3,17 +3,19 @@ import { createClient } from "@/lib/supabase/server";
 import { getLeadsNeedingSalesAssignment, getActiveSalesUsers } from "@/lib/data/assignments";
 import { LeadAssignmentQueue } from "@/components/lead-assignment-queue";
 import { TableSkeleton } from "@/components/skeletons";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { assignToSales } from "./actions";
 
 export default function FirstCallAssignmentsPage() {
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Satışa Atama</h1>
-        <p className="mt-1 text-sm text-muted">
-          Puanladığınız ve satışa hazır leadlerinizi bir satış çalışanına atayın.
-        </p>
-      </div>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Satışa Atama</h1>
+      </SetHeaderContent>
+
+      <p className="text-sm text-muted">
+        Puanladığınız ve satışa hazır leadlerinizi bir satış çalışanına atayın.
+      </p>
 
       <Suspense fallback={<TableSkeleton rows={4} />}>
         <AssignmentQueue />

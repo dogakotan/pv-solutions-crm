@@ -5,6 +5,7 @@ import { getCurrentUserRole } from "@/lib/auth/require-role";
 import { getVisibleActivities, getActivitiesDueInRange } from "@/lib/data/activities";
 import { EmptyState } from "@/components/empty-state";
 import { TableSkeleton } from "@/components/skeletons";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { ListChecks } from "lucide-react";
 import { ActivitiesList } from "./activities-list";
 import { MonthlyCalendar } from "./monthly-calendar";
@@ -39,7 +40,9 @@ export default async function ActivitiesPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Takvim</h1>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Takvim</h1>
+      </SetHeaderContent>
 
       <div className="flex gap-1 border-b border-card-border">
         {TABS.map((tab) => (

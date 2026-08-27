@@ -2,6 +2,7 @@ import { requireActiveUser } from "@/lib/auth/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "./profile-form";
 import { PasswordForm } from "./password-form";
+import { SetHeaderContent } from "@/components/page-header-slot";
 
 export default async function SettingsPage() {
   const { user } = await requireActiveUser();
@@ -19,7 +20,9 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Ayarlar</h1>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Ayarlar</h1>
+      </SetHeaderContent>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">

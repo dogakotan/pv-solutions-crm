@@ -8,18 +8,20 @@ import {
 } from "@/lib/data/assignments";
 import { LeadAssignmentQueue } from "@/components/lead-assignment-queue";
 import { TableSkeleton } from "@/components/skeletons";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { assignToSales, assignToPartner } from "./actions";
 
 export default function AdminAssignmentsPage() {
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Atamalar</h1>
-        <p className="mt-1 text-sm text-muted">
-          Atama işlemleri assign_lead_to_sales / assign_lead_to_partner güvenli RPC&apos;leri
-          üzerinden yapılır; her işlem audit_logs&apos;a kaydedilir.
-        </p>
-      </div>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Atamalar</h1>
+      </SetHeaderContent>
+
+      <p className="text-sm text-muted">
+        Atama işlemleri assign_lead_to_sales / assign_lead_to_partner güvenli RPC&apos;leri
+        üzerinden yapılır; her işlem audit_logs&apos;a kaydedilir.
+      </p>
 
       <Suspense fallback={<TableSkeleton rows={4} />}>
         <SalesAssignmentQueueSection />

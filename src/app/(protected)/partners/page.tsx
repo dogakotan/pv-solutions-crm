@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth/require-role";
 import { getPartners, getRecentPartnerActivity } from "@/lib/data/partners";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { PartnersOverviewTabs } from "./partners-overview-tabs";
 
 export default async function PartnersPage() {
@@ -12,11 +13,12 @@ export default async function PartnersPage() {
 
   return (
     <div className="flex flex-col gap-6">
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Partnerler</h1>
+      </SetHeaderContent>
+
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Partnerler</h1>
-          <p className="text-sm text-muted">Bayi ve iş ortağı firmalar</p>
-        </div>
+        <p className="text-sm text-muted">Bayi ve iş ortağı firmalar</p>
         {canManagePartners && (
           <Link
             href="/partners/new"

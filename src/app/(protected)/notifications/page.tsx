@@ -3,6 +3,7 @@ import { Bell, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getMyNotifications } from "@/lib/data/notifications";
 import { EmptyState } from "@/components/empty-state";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { markNotificationRead, markAllNotificationsRead } from "./actions";
 
 export default async function NotificationsPage() {
@@ -12,9 +13,12 @@ export default async function NotificationsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-foreground">Bildirimler</h1>
-        {unreadCount > 0 && (
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Bildirimler</h1>
+      </SetHeaderContent>
+
+      {unreadCount > 0 && (
+        <div className="flex justify-end">
           <form action={markAllNotificationsRead}>
             <button
               type="submit"
@@ -23,8 +27,8 @@ export default async function NotificationsPage() {
               Tümünü okundu işaretle
             </button>
           </form>
-        )}
-      </div>
+        </div>
+      )}
 
       {notifications.length === 0 ? (
         <EmptyState

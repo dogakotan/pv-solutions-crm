@@ -5,12 +5,15 @@ import { StatCard } from "@/components/stat-card";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { LeadStageBadge, ReferralStatusBadge } from "@/components/lead-badges";
 import { getPartnerReferralKpis, getVisiblePartnerReferrals } from "@/lib/data/leads";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { acceptReferral, rejectReferral } from "./actions";
 
 export default function PartnerAssignedLeadsPage() {
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Bana Yönlendirilen Müşteriler</h1>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Bana Yönlendirilen Müşteriler</h1>
+      </SetHeaderContent>
 
       <Suspense fallback={<KpiGridSkeleton count={9} />}>
         <ReferralKpiGrid />

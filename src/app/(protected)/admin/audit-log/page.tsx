@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import { TableSkeleton } from "@/components/skeletons";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import {
   getAuditLogs,
   AUDIT_ENTITY_TYPES,
@@ -25,13 +26,14 @@ export default async function AuditLogPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">İşlem Kayıtları</h1>
-        <p className="mt-1 text-sm text-muted">
-          Lead silme, rol değişikliği, partner yönlendirme kararı gibi hassas işlemlerin denetim
-          kaydı. Son 100 kayıt gösterilir.
-        </p>
-      </div>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">İşlem Kayıtları</h1>
+      </SetHeaderContent>
+
+      <p className="text-sm text-muted">
+        Lead silme, rol değişikliği, partner yönlendirme kararı gibi hassas işlemlerin denetim
+        kaydı. Son 100 kayıt gösterilir.
+      </p>
 
       <form method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-card-border bg-card p-4 shadow-sm">
         <div className="flex flex-col gap-1">

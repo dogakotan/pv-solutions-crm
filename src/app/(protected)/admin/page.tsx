@@ -4,12 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/stat-card";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { getAdminLeadKpis, getAdminActionItems } from "@/lib/data/leads";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { AdminActionItemsTable } from "./admin-action-items-table";
 
 export default function AdminDashboardPage() {
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Genel Bakış</h1>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Genel Bakış</h1>
+      </SetHeaderContent>
 
       <Suspense fallback={<KpiGridSkeleton count={11} />}>
         <AdminKpiGrid />

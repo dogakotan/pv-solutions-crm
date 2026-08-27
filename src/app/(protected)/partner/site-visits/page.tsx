@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getPartnerSiteVisits } from "@/lib/data/leads";
+import { SetHeaderContent } from "@/components/page-header-slot";
 
 function formatDateKey(iso: string | null): string {
   if (!iso) return "Tarih belirtilmemiş";
@@ -25,7 +26,9 @@ export default async function PartnerSiteVisitsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Keşif Ziyaretleri</h1>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Keşif Ziyaretleri</h1>
+      </SetHeaderContent>
 
       {visits.length === 0 ? (
         <div className="rounded-2xl border border-card-border bg-card p-12 text-center text-sm text-muted shadow-sm">

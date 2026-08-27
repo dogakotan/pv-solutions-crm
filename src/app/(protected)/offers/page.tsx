@@ -2,12 +2,15 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getOffersOverview } from "@/lib/data/offers";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
+import { SetHeaderContent } from "@/components/page-header-slot";
 import { OffersOverviewTabs } from "./offers-overview-tabs";
 
 export default function OffersPage() {
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Teklifler</h1>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Teklifler</h1>
+      </SetHeaderContent>
 
       <Suspense
         fallback={

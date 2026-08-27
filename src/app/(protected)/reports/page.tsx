@@ -12,6 +12,7 @@ import {
 } from "@/lib/data/reports";
 import { LeadStageBadge } from "@/components/lead-badges";
 import { CardGridSkeleton, CardSkeleton } from "@/components/skeletons";
+import { SetHeaderContent } from "@/components/page-header-slot";
 
 const inputClass = "rounded-lg border border-card-border px-3 py-2 text-sm";
 
@@ -28,7 +29,9 @@ export default async function ReportsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Raporlar</h1>
+      <SetHeaderContent>
+        <h1 className="truncate text-lg font-semibold text-foreground">Raporlar</h1>
+      </SetHeaderContent>
 
       <form method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-card-border bg-card p-4 shadow-sm">
         <div className="flex flex-col gap-1">

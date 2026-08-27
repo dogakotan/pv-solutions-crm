@@ -1300,6 +1300,41 @@ export type Database = {
           unsuccessful: number
         }[]
       }
+      get_partners_with_stats: {
+        Args: { p_id?: string }
+        Returns: {
+          active_leads: number
+          address: string
+          application_areas: string[]
+          capabilities: string[]
+          city: string
+          conversion_rate: number
+          created_at: string
+          email: string
+          id: string
+          name: string
+          partner_code: string
+          phone: string
+          pv_owner_name: string
+          rating: number
+          sales: number
+          service_regions: string[]
+          status: string
+          tax_number: string
+          tax_office: string
+          total_leads: number
+        }[]
+      }
+      get_recommended_partners_for_lead: {
+        Args: { p_city: string; p_district?: string }
+        Returns: {
+          city: string
+          id: string
+          name: string
+          rating: number
+          service_regions: string[]
+        }[]
+      }
       get_sales_lead_kpis: {
         Args: { p_end: string; p_start: string }
         Returns: {

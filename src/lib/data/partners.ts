@@ -2,159 +2,13 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 import type { PartnerReferralStatus } from "@/types/lead";
-import { APPLICATION_AREAS, type Partner, type PartnerEmployee, type PartnerStats, type PartnerStatus } from "@/types/partner";
+import type { Partner, PartnerEmployee, PartnerStatus } from "@/types/partner";
 
 type TypedSupabaseClient = SupabaseClient<Database>;
 
-type OwnerEmbed = { full_name: string } | { full_name: string }[] | null;
+type PartnerWithStatsRow = Database["public"]["Functions"]["get_partners_with_stats"]["Returns"][number];
 
-function extractOwnerName(embed: OwnerEmbed): string {
-  if (!embed) return "—";
-  const owner = Array.isArray(embed) ? embed[0] : embed;
-  return owner?.full_name || "—";
-}
-
-async function fetchServiceRegionsByPartner(
-  supabase: TypedSupabaseClient,
-  partnerIds: string[]
-): Promise<Map<string, string[]>> {
-  const map = new Map<string, string[]>();
-  if (partnerIds.length === 0) return map;
-
-  const { data, error } = await supabase
-    .from("partner_service_regions")
-    .select("partner_id, region_code")
-    .in("partner_id", partnerIds);
-
-  if (error) throw error;
-
-  for (const row of data ?? []) {
-    const list = map.get(row.partner_id) ?? [];
-    list.push(row.region_code);
-    map.set(row.partner_id, list);
-  }
-
-  return map;
-}
-
-async function fetchCapabilitiesByPartner(
-  supabase: TypedSupabaseClient,
-  partnerIds: string[]
-): Promise<Map<string, { capabilities: string[]; applicationAreas: string[] }>> {
-  const map = new Map<string, { capabilities: string[]; applicationAreas: string[] }>();
-  if (partnerIds.length === 0) return map;
-
-  const { data, error } = await supabase
-    .from("partner_capabilities")
-    .select("partner_id, capability_code")
-    .in("partner_id", partnerIds);
-
-  if (error) throw error;
-
-  for (const row of data ?? []) {
-    const entry = map.get(row.partner_id) ?? { capabilities: [], applicationAreas: [] };
-    if ((APPLICATION_AREAS as readonly string[]).includes(row.capability_code)) {
-      entry.applicationAreas.push(row.capability_code);
-    } else {
-      entry.capabilities.push(row.capability_code);
-    }
-    map.set(row.partner_id, entry);
-  }
-
-  return map;
-}
-
-async function computePartnerStats(supabase: TypedSupabaseClient, partnerId: string): Promise<PartnerStats> {
-  const map = await computePartnerStatsByPartner(supabase, [partnerId]);
-  return map.get(partnerId) ?? { totalLeads: 0, activeLeads: 0, sales: 0, conversionRate: 0 };
-}
-
-/**
- * N partner için 2 sorguda istatistik üretir (partner başına ayrı sorgu yerine).
- * `getPartners` listesi büyüdükçe eski hal 2N+1 sorguya çıkıyordu.
- */
-async function computePartnerStatsByPartner(
-  supabase: TypedSupabaseClient,
-  partnerIds: string[]
-): Promise<Map<string, PartnerStats>> {
-  const statsMap = new Map<string, PartnerStats>();
-  if (partnerIds.length === 0) return statsMap;
-
-  const { data: referrals, error } = await supabase
-    .from("partner_referrals")
-    .select("id, partner_id, status")
-    .in("partner_id", partnerIds);
-
-  if (error) throw error;
-
-  const referralRows = referrals ?? [];
-  const referralIdToPartnerId = new Map(referralRows.map((r) => [r.id, r.partner_id]));
-
-  const totals = new Map<string, { total: number; activeLeads: number }>();
-  for (const row of referralRows) {
-    const entry = totals.get(row.partner_id) ?? { total: 0, activeLeads: 0 };
-    entry.total += 1;
-    if (row.status === "pending" || row.status === "accepted") entry.activeLeads += 1;
-    totals.set(row.partner_id, entry);
-  }
-
-  const salesByPartner = new Map<string, number>();
-  const allReferralIds = referralRows.map((r) => r.id);
-  if (allReferralIds.length > 0) {
-    const { data: wonOutcomes, error: outcomesError } = await supabase
-      .from("sales_outcomes")
-      .select("referral_id")
-      .eq("outcome", "won")
-      .in("referral_id", allReferralIds);
-
-    if (outcomesError) throw outcomesError;
-
-    for (const row of wonOutcomes ?? []) {
-      if (!row.referral_id) continue;
-      const partnerId = referralIdToPartnerId.get(row.referral_id);
-      if (!partnerId) continue;
-      salesByPartner.set(partnerId, (salesByPartner.get(partnerId) ?? 0) + 1);
-    }
-  }
-
-  for (const partnerId of partnerIds) {
-    const { total, activeLeads } = totals.get(partnerId) ?? { total: 0, activeLeads: 0 };
-    const sales = salesByPartner.get(partnerId) ?? 0;
-    statsMap.set(partnerId, {
-      totalLeads: total,
-      activeLeads,
-      sales,
-      conversionRate: total > 0 ? (sales / total) * 100 : 0,
-    });
-  }
-
-  return statsMap;
-}
-
-const PARTNER_SELECT = "id, partner_code, name, tax_number, tax_office, phone, email, city, address, status, rating, created_at, profiles!partners_pv_owner_id_fkey(full_name)";
-
-type PartnerRow = {
-  id: string;
-  partner_code: string | null;
-  name: string;
-  tax_number: string | null;
-  tax_office: string | null;
-  phone: string | null;
-  email: string | null;
-  city: string | null;
-  address: string | null;
-  status: string;
-  rating: number | null;
-  created_at: string;
-  profiles: OwnerEmbed;
-};
-
-function buildPartner(
-  row: PartnerRow,
-  regions: string[],
-  caps: { capabilities: string[]; applicationAreas: string[] },
-  stats: PartnerStats
-): Partner {
+function buildPartner(row: PartnerWithStatsRow): Partner {
   return {
     id: row.id,
     partnerCode: row.partner_code ?? "",
@@ -167,40 +21,25 @@ function buildPartner(
     address: row.address,
     status: row.status as PartnerStatus,
     rating: row.rating,
-    serviceRegions: regions,
-    capabilities: caps.capabilities,
-    applicationAreas: caps.applicationAreas,
-    pvOwnerName: extractOwnerName(row.profiles),
+    serviceRegions: row.service_regions ?? [],
+    capabilities: row.capabilities ?? [],
+    applicationAreas: row.application_areas ?? [],
+    pvOwnerName: row.pv_owner_name ?? "—",
     createdAt: row.created_at,
-    stats,
+    stats: {
+      totalLeads: row.total_leads ?? 0,
+      activeLeads: row.active_leads ?? 0,
+      sales: row.sales ?? 0,
+      conversionRate: row.conversion_rate ?? 0,
+    },
   };
 }
 
 export async function getPartners(supabase: TypedSupabaseClient): Promise<Partner[]> {
-  const { data, error } = await supabase
-    .from("partners")
-    .select(PARTNER_SELECT)
-    .order("created_at", { ascending: false });
-
+  const { data, error } = await supabase.rpc("get_partners_with_stats");
   if (error) throw error;
 
-  const rows = (data ?? []) as PartnerRow[];
-  const ids = rows.map((row) => row.id);
-
-  const [regionsMap, capsMap, statsMap] = await Promise.all([
-    fetchServiceRegionsByPartner(supabase, ids),
-    fetchCapabilitiesByPartner(supabase, ids),
-    computePartnerStatsByPartner(supabase, ids),
-  ]);
-
-  return rows.map((row) =>
-    buildPartner(
-      row,
-      regionsMap.get(row.id) ?? [],
-      capsMap.get(row.id) ?? { capabilities: [], applicationAreas: [] },
-      statsMap.get(row.id) ?? { totalLeads: 0, activeLeads: 0, sales: 0, conversionRate: 0 }
-    )
-  );
+  return (data ?? []).map(buildPartner);
 }
 
 /**
@@ -237,74 +76,27 @@ export async function getRecommendedPartnersForLead(
   supabase: TypedSupabaseClient,
   lead: { city: string; district: string | null }
 ): Promise<RecommendedPartner[]> {
-  const regionTerms = [lead.district, lead.city].filter((v): v is string => Boolean(v && v.trim()));
-  const partnerIds = new Set<string>();
-
-  const [regionResult, cityResult] = await Promise.all([
-    regionTerms.length > 0
-      ? supabase
-          .from("partner_service_regions")
-          .select("partner_id, region_code")
-          .or(regionTerms.map((term) => `region_code.ilike.${term}`).join(","))
-      : Promise.resolve({ data: [], error: null }),
-    supabase.from("partners").select("id").eq("status", "active").ilike("city", lead.city),
-  ]);
-
-  if (regionResult.error) throw regionResult.error;
-  for (const row of regionResult.data ?? []) partnerIds.add(row.partner_id);
-
-  if (cityResult.error) throw cityResult.error;
-  for (const row of cityResult.data ?? []) partnerIds.add(row.id);
-
-  if (partnerIds.size === 0) return [];
-
-  const { data, error } = await supabase
-    .from("partners")
-    .select(PARTNER_SELECT)
-    .eq("status", "active")
-    .in("id", Array.from(partnerIds));
-
+  const { data, error } = await supabase.rpc("get_recommended_partners_for_lead", {
+    p_city: lead.city,
+    p_district: lead.district ?? undefined,
+  });
   if (error) throw error;
 
-  const rows = (data ?? []) as PartnerRow[];
-  const ids = rows.map((row) => row.id);
-  const regionsMap = await fetchServiceRegionsByPartner(supabase, ids);
-
-  return rows
-    .map((row) => ({
-      id: row.id,
-      name: row.name,
-      city: row.city ?? "",
-      serviceRegions: regionsMap.get(row.id) ?? [],
-      rating: row.rating ?? 0,
-    }))
-    .sort((a, b) => b.rating - a.rating)
-    .slice(0, 3);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    city: row.city ?? "",
+    serviceRegions: row.service_regions ?? [],
+    rating: row.rating ?? 0,
+  }));
 }
 
 export async function getPartnerById(supabase: TypedSupabaseClient, id: string): Promise<Partner | null> {
-  const { data, error } = await supabase
-    .from("partners")
-    .select(PARTNER_SELECT)
-    .eq("id", id)
-    .maybeSingle();
-
+  const { data, error } = await supabase.rpc("get_partners_with_stats", { p_id: id }).maybeSingle();
   if (error) throw error;
   if (!data) return null;
 
-  const row = data as PartnerRow;
-  const [regionsMap, capsMap, stats] = await Promise.all([
-    fetchServiceRegionsByPartner(supabase, [row.id]),
-    fetchCapabilitiesByPartner(supabase, [row.id]),
-    computePartnerStats(supabase, row.id),
-  ]);
-
-  return buildPartner(
-    row,
-    regionsMap.get(row.id) ?? [],
-    capsMap.get(row.id) ?? { capabilities: [], applicationAreas: [] },
-    stats
-  );
+  return buildPartner(data);
 }
 
 type RoleEmbed = { role: string } | { role: string }[] | null;

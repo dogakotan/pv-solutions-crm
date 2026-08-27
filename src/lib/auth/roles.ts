@@ -30,10 +30,10 @@ export function getDefaultRouteForRole(role: AppRole): string {
     case "admin":
       return "/admin";
     case "first_call":
-      return "/first-call/lead-pool";
+      return "/first-call";
     case "sales":
       return "/sales";
     case "partner":
-      return "/partner/assigned-leads";
+      return "/partner";
   }
 }

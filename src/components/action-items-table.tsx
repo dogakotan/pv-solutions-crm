@@ -9,7 +9,13 @@ const REASON_STYLES: Record<ActionItem["reason"], { label: string; className: st
   partner_response_overdue: { label: "Partner Yanıtı Gecikmiş", className: "bg-amber-50 text-amber-700" },
 };
 
-export function ActionItemsTable({ items }: { items: ActionItem[] }) {
+export function ActionItemsTable({
+  items,
+  canOpenLead = true,
+}: {
+  items: ActionItem[];
+  canOpenLead?: boolean;
+}) {
   if (items.length === 0) {
     return (
       <EmptyState
@@ -39,9 +45,13 @@ export function ActionItemsTable({ items }: { items: ActionItem[] }) {
             return (
               <tr key={item.id} className="border-b border-card-border last:border-0">
                 <td className="px-4 py-3">
-                  <Link href={`/leads/${item.leadId}`} className="font-medium text-brand hover:underline">
-                    {item.leadNo}
-                  </Link>
+                  {canOpenLead ? (
+                    <Link href={`/leads/${item.leadId}`} className="font-medium text-brand hover:underline">
+                      {item.leadNo}
+                    </Link>
+                  ) : (
+                    <span className="font-medium text-foreground">{item.leadNo}</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-foreground">{item.customerName}</td>
                 <td className="px-4 py-3 text-muted">{item.city}</td>

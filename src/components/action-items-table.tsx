@@ -1,15 +1,15 @@
 import Link from "next/link";
-import type { AdminActionItem } from "@/lib/data/leads";
+import type { ActionItem } from "@/lib/data/leads";
 import { LeadStageBadge } from "@/components/lead-badges";
 import { EmptyState } from "@/components/empty-state";
 import { CheckCircle2 } from "lucide-react";
 
-const REASON_STYLES: Record<AdminActionItem["reason"], { label: string; className: string }> = {
+const REASON_STYLES: Record<ActionItem["reason"], { label: string; className: string }> = {
   follow_up_overdue: { label: "Takip Gecikmiş", className: "bg-red-50 text-red-700" },
   partner_response_overdue: { label: "Partner Yanıtı Gecikmiş", className: "bg-amber-50 text-amber-700" },
 };
 
-export function AdminActionItemsTable({ items }: { items: AdminActionItem[] }) {
+export function ActionItemsTable({ items }: { items: ActionItem[] }) {
   if (items.length === 0) {
     return (
       <EmptyState

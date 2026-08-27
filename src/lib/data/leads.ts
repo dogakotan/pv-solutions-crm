@@ -288,7 +288,7 @@ export async function getAdminLeadKpis(supabase: TypedSupabaseClient) {
   };
 }
 
-export type AdminActionItem = {
+export type ActionItem = {
   id: string;
   leadId: string;
   leadNo: string;
@@ -304,7 +304,7 @@ type ActionItemReferralLeadEmbed =
   | { id: string; lead_no: string; customer_name: string; city: string; stage: string }[]
   | null;
 
-export async function getAdminActionItems(supabase: TypedSupabaseClient, limit = 20): Promise<AdminActionItem[]> {
+export async function getActionItems(supabase: TypedSupabaseClient, limit = 20): Promise<ActionItem[]> {
   const now = new Date().toISOString();
 
   const [followUpRes, referralRes] = await Promise.all([
@@ -329,7 +329,7 @@ export async function getAdminActionItems(supabase: TypedSupabaseClient, limit =
   if (followUpRes.error) throw followUpRes.error;
   if (referralRes.error) throw referralRes.error;
 
-  const followUpItems: AdminActionItem[] = (followUpRes.data ?? []).map((row) => ({
+  const followUpItems: ActionItem[] = (followUpRes.data ?? []).map((row) => ({
     id: `lead-${row.id}`,
     leadId: row.id,
     leadNo: row.lead_no ?? "",
@@ -340,7 +340,7 @@ export async function getAdminActionItems(supabase: TypedSupabaseClient, limit =
     dueAt: row.next_follow_up_at as string,
   }));
 
-  const referralItems: AdminActionItem[] = (referralRes.data ?? []).flatMap((row) => {
+  const referralItems: ActionItem[] = (referralRes.data ?? []).flatMap((row) => {
     const lead = extractLead(row.leads as ActionItemReferralLeadEmbed);
     if (!lead) return [];
     return [{

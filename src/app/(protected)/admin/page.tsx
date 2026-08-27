@@ -3,9 +3,9 @@ import { Users, UserPlus, PhoneCall, Handshake, AlertTriangle, ClipboardList, Fi
 import { createClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/stat-card";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
-import { getAdminLeadKpis, getAdminActionItems } from "@/lib/data/leads";
+import { getAdminLeadKpis, getActionItems } from "@/lib/data/leads";
 import { SetHeaderContent } from "@/components/page-header-slot";
-import { AdminActionItemsTable } from "./admin-action-items-table";
+import { ActionItemsTable } from "@/components/action-items-table";
 
 export default function AdminDashboardPage() {
   return (
@@ -35,9 +35,9 @@ export default function AdminDashboardPage() {
 
 async function AdminActionItemsSection() {
   const supabase = await createClient();
-  const items = await getAdminActionItems(supabase);
+  const items = await getActionItems(supabase);
 
-  return <AdminActionItemsTable items={items} />;
+  return <ActionItemsTable items={items} />;
 }
 
 async function AdminKpiGrid() {

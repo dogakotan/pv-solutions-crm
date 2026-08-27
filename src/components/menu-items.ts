@@ -41,6 +41,6 @@ export const menuItems: MenuItem[] = [
   { label: "Teklifler", href: "/offers", icon: FileText, roles: ALL_ROLES },
   { label: "Takvim", href: "/activities", icon: Calendar, roles: ALL_ROLES },
   { label: "Bildirimler", href: "/notifications", icon: Bell, roles: ALL_ROLES },
-  { label: "Raporlar", href: "/reports", icon: BarChart3, roles: ALL_ROLES },
+  { label: "Raporlar", href: "/reports", icon: BarChart3, roles: ["admin"] },
   { label: "Ayarlar", href: "/settings", icon: Settings, roles: ALL_ROLES },
 ];

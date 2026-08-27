@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { requireActiveUser } from "@/lib/auth/current-user";
+import { requireRole } from "@/lib/auth/require-role";
 import { createClient } from "@/lib/supabase/server";
 import {
   getLeadFunnel,
@@ -23,7 +23,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
-  await requireActiveUser();
+  await requireRole(["admin"]);
   const { from, to } = await searchParams;
   const range: ReportRange = { from: from || null, to: to || null };
 

@@ -56,6 +56,57 @@ test.describe("rol bazlı Genel Bakış sayfaları (RPC KPI/aksiyon sorguları)"
   }
 });
 
+test.describe("first_call sayfaları", () => {
+  const email = process.env.FIRST_CALL_TEST_EMAIL;
+  const password = process.env.FIRST_CALL_TEST_PASSWORD;
+
+  test.skip(!email || !password, "FIRST_CALL_TEST_EMAIL / FIRST_CALL_TEST_PASSWORD tanımlı değil — .env.local'e bakınız");
+
+  test("Genel Bakış'ta bugünkü aksiyonlar ve haftalık nitelendirme trendi görünür", async ({ page }) => {
+    await loginAs(page, email!, password!);
+    await page.goto("/first-call");
+
+    await expect(page.getByText("Bugünkü Aksiyonlar")).toBeVisible();
+    await expect(page.getByText("Haftalık Nitelendirme Performansım")).toBeVisible();
+    await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
+  });
+
+  test("sidebar'daki Yeni Lead linki /first-call/new-lead'e gider", async ({ page }) => {
+    await loginAs(page, email!, password!);
+    await page.goto("/first-call");
+
+    await page.getByRole("navigation").getByRole("link", { name: "Yeni Lead" }).click();
+    await page.waitForURL(/\/first-call\/new-lead$/);
+    await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
+  });
+
+  test("/first-call/lead-pool sekmeleri arasında geçiş yapılabilir", async ({ page }) => {
+    await loginAs(page, email!, password!);
+    await page.goto("/first-call/lead-pool");
+
+    await expect(page.getByRole("heading", { name: "Lead Havuzu", level: 1 })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Havuzdaki Yeni Leadler" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Takip Ettiklerim" }).click();
+    await expect(page.getByPlaceholder("Müşteri, lead no veya şehir ara...")).toBeVisible();
+    await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
+  });
+
+  test("/first-call/assignments hata sınırına düşmeden yüklenir", async ({ page }) => {
+    await loginAs(page, email!, password!);
+    await page.goto("/first-call/assignments");
+
+    await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
+  });
+
+  test("/first-call/new-lead hata sınırına düşmeden yüklenir", async ({ page }) => {
+    await loginAs(page, email!, password!);
+    await page.goto("/first-call/new-lead");
+
+    await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
+  });
+});
+
 test.describe("RPC'ye taşınan admin sayfaları", () => {
   const email = process.env.E2E_TEST_EMAIL;
   const password = process.env.E2E_TEST_PASSWORD;

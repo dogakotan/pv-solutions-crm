@@ -2,11 +2,11 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { UserPlus, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { LeadsTable } from "@/components/leads-table";
 import { FirstCallKpiGrid } from "@/components/first-call-kpi-grid";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { getVisibleLeads } from "@/lib/data/leads";
 import { SetHeaderContent } from "@/components/page-header-slot";
+import { LeadPoolTabs } from "./lead-pool-tabs";
 
 export default function FirstCallLeadPoolPage() {
   return (
@@ -42,38 +42,16 @@ export default function FirstCallLeadPoolPage() {
         <FirstCallKpiGrid />
       </Suspense>
 
-      <Suspense
-        fallback={
-          <div className="flex flex-col gap-6">
-            <TableSkeleton rows={5} />
-            <TableSkeleton rows={5} />
-          </div>
-        }
-      >
-        <LeadPoolTables />
+      <Suspense fallback={<TableSkeleton rows={8} />}>
+        <LeadPoolSection />
       </Suspense>
     </div>
   );
 }
 
-async function LeadPoolTables() {
+async function LeadPoolSection() {
   const supabase = await createClient();
   const leads = await getVisibleLeads(supabase, 200);
 
-  const poolLeads = leads.filter((lead) => lead.stage === "new");
-  const followUpLeads = leads.filter((lead) => lead.stage !== "new");
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium text-foreground">Havuzdaki Yeni Leadler</h2>
-        <LeadsTable leads={poolLeads} emptyMessage="Havuzda henüz aranmamış yeni lead yok." />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium text-foreground">Takip Ettiklerim</h2>
-        <LeadsTable leads={followUpLeads} emptyMessage="Şu an takip ettiğiniz bir lead yok." />
-      </div>
-    </div>
-  );
+  return <LeadPoolTabs leads={leads} />;
 }

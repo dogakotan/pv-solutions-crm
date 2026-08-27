@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { UserPlus, PhoneCall, MessageCircle, HelpCircle, Send } from "lucide-react";
+import { UserPlus, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { StatCard } from "@/components/stat-card";
 import { LeadsTable } from "@/components/leads-table";
+import { FirstCallKpiGrid } from "@/components/first-call-kpi-grid";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
-import { getFirstCallLeadKpis, getVisibleLeads } from "@/lib/data/leads";
+import { getVisibleLeads } from "@/lib/data/leads";
 import { SetHeaderContent } from "@/components/page-header-slot";
 
 export default function FirstCallLeadPoolPage() {
@@ -14,6 +14,8 @@ export default function FirstCallLeadPoolPage() {
       <SetHeaderContent>
         <h1 className="truncate text-lg font-semibold text-foreground">Lead Havuzu</h1>
       </SetHeaderContent>
+
+      <p className="-mt-4 text-sm text-muted">Size atanan ve girdiğiniz leadler</p>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
         <Link
@@ -32,8 +34,12 @@ export default function FirstCallLeadPoolPage() {
         </Link>
       </div>
 
-      <Suspense fallback={<KpiGridSkeleton count={5} />}>
-        <LeadPoolKpiGrid />
+      <Suspense
+        fallback={
+          <KpiGridSkeleton count={5} className="grid grid-cols-1 gap-4 sm:grid-cols-4 [&>*:last-child]:sm:col-span-2" />
+        }
+      >
+        <FirstCallKpiGrid />
       </Suspense>
 
       <Suspense
@@ -46,21 +52,6 @@ export default function FirstCallLeadPoolPage() {
       >
         <LeadPoolTables />
       </Suspense>
-    </div>
-  );
-}
-
-async function LeadPoolKpiGrid() {
-  const supabase = await createClient();
-  const kpis = await getFirstCallLeadKpis(supabase);
-
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      <StatCard icon={UserPlus} label="Yeni Atanan" value={String(kpis.newAssigned)} />
-      <StatCard icon={PhoneCall} label="Bugün Aranacak" value={String(kpis.dueToday)} />
-      <StatCard icon={MessageCircle} label="Görüşme Tamamlanan" value={String(kpis.contacted)} />
-      <StatCard icon={HelpCircle} label="Puanlama Bekleyen" value={String(kpis.unscored)} />
-      <StatCard icon={Send} label="Satışa Aktarılacak" value={String(kpis.readyForSales)} />
     </div>
   );
 }

@@ -308,6 +308,21 @@ export async function getFirstCallLeadKpis(supabase: TypedSupabaseClient) {
   };
 }
 
+export type QualifiedTrendPoint = { weekStart: string; qualifiedCount: number };
+
+export async function getFirstCallQualifiedTrend(
+  supabase: TypedSupabaseClient,
+  weeks = 6
+): Promise<QualifiedTrendPoint[]> {
+  const { data, error } = await supabase.rpc("get_first_call_qualified_trend", { p_weeks: weeks });
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    weekStart: row.week_start,
+    qualifiedCount: row.qualified_count,
+  }));
+}
+
 export async function getSalesLeadKpis(supabase: TypedSupabaseClient) {
   const { start, end } = todayRange();
 

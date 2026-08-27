@@ -1287,6 +1287,13 @@ export type Database = {
           unscored: number
         }[]
       }
+      get_first_call_qualified_trend: {
+        Args: { p_weeks?: number }
+        Returns: {
+          qualified_count: number
+          week_start: string
+        }[]
+      }
       get_lead_funnel: {
         Args: { p_from?: string; p_to?: string }
         Returns: {

@@ -11,6 +11,7 @@ import {
   Send,
   MapPin,
   ScrollText,
+  UserPlus,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole } from "@/lib/auth/roles";
@@ -31,6 +32,7 @@ export const menuItems: MenuItem[] = [
   { label: "Leadler", href: "/leads", icon: Users, roles: ["admin"] },
   { label: "Atamalar", href: "/admin/assignments", icon: Send, roles: ["admin"] },
   { label: "Lead Havuzu", href: "/first-call/lead-pool", icon: Users, roles: ["first_call"] },
+  { label: "Yeni Lead", href: "/first-call/new-lead", icon: UserPlus, roles: ["first_call"] },
   { label: "Satışa Atama", href: "/first-call/assignments", icon: Send, roles: ["first_call"] },
   { label: "Leadlerim", href: "/sales/my-leads", icon: Briefcase, roles: ["sales"] },
   { label: "Bana Yönlendirilenler", href: "/partner/assigned-leads", icon: Handshake, roles: ["partner"] },

@@ -15,6 +15,7 @@ export async function markNotificationRead(formData: FormData) {
   if (error) throw error;
 
   revalidatePath("/notifications");
+  revalidatePath("/", "layout");
 }
 
 export async function markAllNotificationsRead() {
@@ -27,4 +28,5 @@ export async function markAllNotificationsRead() {
   if (error) throw error;
 
   revalidatePath("/notifications");
+  revalidatePath("/", "layout");
 }

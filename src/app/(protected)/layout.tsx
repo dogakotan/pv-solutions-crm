@@ -1,13 +1,10 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
-import Link from "next/link";
-import { Bell } from "lucide-react";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { SidebarProvider, SidebarFrame, MobileMenuButton } from "@/components/sidebar-shell";
 import { HeaderPageSlot } from "@/components/page-header-slot";
+import { NotificationBellPopover } from "@/components/notification-bell-popover";
 import { getCurrentUserRole } from "@/lib/auth/require-role";
-import { createClient } from "@/lib/supabase/server";
-import { getUnreadNotificationCount } from "@/lib/data/notifications";
 import { logout } from "./actions";
 
 /**
@@ -23,10 +20,15 @@ import { logout } from "./actions";
  * durumu SidebarProvider (client context) header ile aside arasında
  * paylaşıyor, bkz. components/sidebar-shell.tsx.
  *
- * `instant = false`: bu layout'un header'ı (bildirim sayısı, oturum
- * açan kullanıcı) kullanıcıya özel, cookie'ye bağlı veri okuyor — bu
- * veri paylaşılan/statik bir "instant" kabuğun parçası olamaz ve
- * olmamalı (her kullanıcı için farklı, önbelleklenmemeli). Dıştan bu
+ * `instant = false`: bu layout'un header'ı (oturum açan kullanıcı adı)
+ * kullanıcıya özel, cookie'ye bağlı veri okuyor — bu veri paylaşılan/statik
+ * bir "instant" kabuğun parçası olamaz ve olmamalı (her kullanıcı için
+ * farklı, önbelleklenmemeli). Bildirim kutusu (NotificationBellPopover)
+ * artık ayrı — tamamen client component, kendi verisini /api/notifications/
+ * summary'den fetch(no-store) ile çekiyor (bkz. o route'taki not: Cache
+ * Components'te server component prop'ları oturum başına client'ta
+ * önbelleklenen App Shell'in parçası olduğundan mark-as-read sonrası
+ * router.refresh() güncel veriyi garanti etmiyordu). Dıştan bu
  * layout'a giren navigasyonlar bu yüzden bloklanmaya izinli; layout
  * zaten mount olduktan sonraki korumalı sayfalar-arası geçişler
  * (layout yeniden render olmadığından) instant doğrulamasından ayrıca
@@ -51,9 +53,7 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
               <HeaderPageSlot />
             </div>
             <div className="flex items-center gap-4">
-              <Suspense fallback={<NotificationBellSkeleton />}>
-                <NotificationBell />
-              </Suspense>
+              <NotificationBellPopover />
               <Suspense fallback={<HeaderUserSkeleton />}>
                 <HeaderUser />
               </Suspense>
@@ -102,28 +102,4 @@ async function HeaderUser() {
 
 function HeaderUserSkeleton() {
   return <div className="h-8 w-40 animate-pulse rounded-lg bg-background" />;
-}
-
-async function NotificationBell() {
-  const supabase = await createClient();
-  const unreadCount = await getUnreadNotificationCount(supabase);
-
-  return (
-    <Link
-      href="/notifications"
-      aria-label="Bildirimler"
-      className="relative flex h-9 w-9 items-center justify-center rounded-lg hover:bg-background"
-    >
-      <Bell className="h-5 w-5 text-muted" aria-hidden="true" />
-      {unreadCount > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
-          {unreadCount > 9 ? "9+" : unreadCount}
-        </span>
-      )}
-    </Link>
-  );
-}
-
-function NotificationBellSkeleton() {
-  return <div className="h-9 w-9 animate-pulse rounded-lg bg-background" />;
 }

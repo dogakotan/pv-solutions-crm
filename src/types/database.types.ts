@@ -1294,6 +1294,17 @@ export type Database = {
           stage: string
         }[]
       }
+      get_leads_needing_partner_assignment: {
+        Args: { p_limit?: number }
+        Returns: {
+          city: string
+          customer_name: string
+          id: string
+          lead_no: string
+          lead_score: string
+          stage: string
+        }[]
+      }
       get_lost_reasons: {
         Args: { p_from?: string; p_to?: string }
         Returns: {

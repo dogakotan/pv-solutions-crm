@@ -52,37 +52,17 @@ export async function getLeadsNeedingPartnerAssignment(
   supabase: TypedSupabaseClient,
   limit = 50
 ): Promise<AssignableLead[]> {
-  const { data: candidates, error } = await supabase
-    .from("leads")
-    .select("id, lead_no, customer_name, city, stage, lead_score")
-    .not("sales_user_id", "is", null)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: true })
-    .limit(limit);
-
+  const { data, error } = await supabase.rpc("get_leads_needing_partner_assignment", { p_limit: limit });
   if (error) throw error;
-  if (!candidates || candidates.length === 0) return [];
 
-  const { data: activeReferrals, error: referralError } = await supabase
-    .from("partner_referrals")
-    .select("lead_id")
-    .is("closed_at", null)
-    .in("lead_id", candidates.map((lead) => lead.id));
-
-  if (referralError) throw referralError;
-
-  const leadIdsWithActiveReferral = new Set((activeReferrals ?? []).map((r) => r.lead_id));
-
-  return candidates
-    .filter((lead) => !leadIdsWithActiveReferral.has(lead.id))
-    .map((row) => ({
-      id: row.id,
-      leadNo: row.lead_no ?? "",
-      customerName: row.customer_name,
-      city: row.city,
-      stage: row.stage as LeadStage,
-      leadScore: row.lead_score as LeadScore | null,
-    }));
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    leadNo: row.lead_no ?? "",
+    customerName: row.customer_name,
+    city: row.city,
+    stage: row.stage as LeadStage,
+    leadScore: row.lead_score as LeadScore | null,
+  }));
 }
 
 export async function getActiveSalesUsers(supabase: TypedSupabaseClient): Promise<ActiveUserOption[]> {

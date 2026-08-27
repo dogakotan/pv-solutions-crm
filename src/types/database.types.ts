@@ -1287,6 +1287,41 @@ export type Database = {
           unscored: number
         }[]
       }
+      get_lead_funnel: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          count: number
+          stage: string
+        }[]
+      }
+      get_lost_reasons: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          count: number
+          reason: string
+        }[]
+      }
+      get_monthly_won_amount: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          currency: string
+          month: string
+          total_amount: number
+        }[]
+      }
+      get_partner_performance: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          acceptance_rate: number
+          avg_response_hours: number
+          offer_count: number
+          partner_id: string
+          partner_name: string
+          rating: number
+          referral_count: number
+          sales_count: number
+        }[]
+      }
       get_partner_referral_kpis: {
         Args: never
         Returns: {
@@ -1341,6 +1376,28 @@ export type Database = {
           due_today: number
           lost: number
           overdue_partner: number
+          total: number
+          won: number
+        }[]
+      }
+      get_salesperson_performance: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          lost: number
+          new_count: number
+          offers_sent: number
+          open_count: number
+          sales_user_id: string
+          sales_user_name: string
+          won: number
+          won_amounts: Json
+        }[]
+      }
+      get_source_conversion: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: {
+          lost: number
+          source: string
           total: number
           won: number
         }[]

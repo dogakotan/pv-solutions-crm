@@ -79,46 +79,24 @@ export type OfferOverviewItem = OfferListItem & {
 /**
  * Teklifler > Genel/Teklif Listesi sayfaları için — her teklife en son
  * revizyonun tutarı ve geçerlilik tarihini ("sonraki aksiyon tarihi"
- * olarak kullanılıyor) ekler. offer_versions tek başına teklif listesine
- * gömülü olmadığı için getOffersForPartner'daki aynı iki-sorgulu desen
- * kullanılıyor.
+ * olarak kullanılıyor) ekler. getVisibleOffers/Excel export akışına
+ * dokunmadan ayrı bir RPC ile tek sorguda çekiliyor.
  */
 export async function getOffersOverview(supabase: TypedSupabaseClient, limit = 500): Promise<OfferOverviewItem[]> {
-  const offers = await getVisibleOffers(supabase, limit);
-  const offerIds = offers.map((o) => o.id);
+  const { data, error } = await supabase.rpc("get_offers_overview", { p_limit: limit });
+  if (error) throw error;
 
-  const latestByOffer = new Map<string, { amount: number; currency: string; revisionNo: number; validUntil: string | null }>();
-
-  if (offerIds.length > 0) {
-    const { data: versions, error: versionsError } = await supabase
-      .from("offer_versions")
-      .select("offer_id, amount, currency, revision_no, valid_until")
-      .in("offer_id", offerIds);
-
-    if (versionsError) throw versionsError;
-
-    for (const v of versions ?? []) {
-      const current = latestByOffer.get(v.offer_id);
-      if (!current || v.revision_no > current.revisionNo) {
-        latestByOffer.set(v.offer_id, {
-          amount: v.amount,
-          currency: v.currency,
-          revisionNo: v.revision_no,
-          validUntil: v.valid_until,
-        });
-      }
-    }
-  }
-
-  return offers.map((o) => {
-    const latest = latestByOffer.get(o.id);
-    return {
-      ...o,
-      amount: latest?.amount ?? null,
-      currency: latest?.currency ?? null,
-      nextActionAt: latest?.validUntil ?? null,
-    };
-  });
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    offerNo: row.offer_no,
+    status: row.status as OfferStatus,
+    createdAt: row.created_at,
+    leadNo: row.lead_no,
+    customerName: row.customer_name,
+    amount: row.amount,
+    currency: row.currency,
+    nextActionAt: row.next_action_at,
+  }));
 }
 
 export type PartnerOfferItem = OfferListItem & {
@@ -129,58 +107,24 @@ export type PartnerOfferItem = OfferListItem & {
 /**
  * Partner detay sayfasındaki "Teklifler" sekmesi için — bu partnere
  * yönlendirilmiş (partner_referrals üzerinden) leadler için oluşturulmuş
- * tekliflerin listesi, en son revizyonun tutarıyla birlikte. offer_versions
- * tek başına partner_id taşımadığı için offers -> partner_referrals join'i
- * gerekiyor (bkz. getSalesOutcomesForPartner'daki aynı desen).
+ * tekliflerin listesi, en son revizyonun tutarıyla birlikte.
  */
 export async function getOffersForPartner(
   supabase: TypedSupabaseClient,
   partnerId: string
 ): Promise<PartnerOfferItem[]> {
-  const { data, error } = await supabase
-    .from("offers")
-    .select("id, offer_no, status, created_at, leads(lead_no, customer_name), partner_referrals!inner(partner_id)")
-    .eq("partner_referrals.partner_id", partnerId)
-    .order("created_at", { ascending: false });
-
+  const { data, error } = await supabase.rpc("get_offers_for_partner", { p_partner_id: partnerId });
   if (error) throw error;
 
-  const offers = (data ?? []).flatMap((row) => {
-    const lead = extractLead(row.leads as LeadEmbed);
-    if (!lead) return [];
-    return [{
-      id: row.id,
-      offerNo: row.offer_no,
-      status: row.status as OfferStatus,
-      createdAt: row.created_at,
-      leadNo: lead.lead_no,
-      customerName: lead.customer_name,
-    }];
-  });
-
-  const offerIds = offers.map((o) => o.id);
-  const latestByOffer = new Map<string, { amount: number; currency: string; revisionNo: number }>();
-
-  if (offerIds.length > 0) {
-    const { data: versions, error: versionsError } = await supabase
-      .from("offer_versions")
-      .select("offer_id, amount, currency, revision_no")
-      .in("offer_id", offerIds);
-
-    if (versionsError) throw versionsError;
-
-    for (const v of versions ?? []) {
-      const current = latestByOffer.get(v.offer_id);
-      if (!current || v.revision_no > current.revisionNo) {
-        latestByOffer.set(v.offer_id, { amount: v.amount, currency: v.currency, revisionNo: v.revision_no });
-      }
-    }
-  }
-
-  return offers.map((o) => ({
-    ...o,
-    latestAmount: latestByOffer.get(o.id)?.amount ?? null,
-    latestCurrency: latestByOffer.get(o.id)?.currency ?? null,
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    offerNo: row.offer_no,
+    status: row.status as OfferStatus,
+    createdAt: row.created_at,
+    leadNo: row.lead_no,
+    customerName: row.customer_name,
+    latestAmount: row.latest_amount,
+    latestCurrency: row.latest_currency,
   }));
 }
 
@@ -260,24 +204,60 @@ export type LeadOfferHistory = {
  * offer_versions'a yeni satır olarak eklenir); birden fazla teklif
  * açılırsa en eskisi kullanılır.
  */
+type OfferHistoryVersionRow = {
+  id: string;
+  revision_no: number;
+  amount: number;
+  currency: string;
+  vat_included: boolean;
+  valid_until: string | null;
+  scope_summary: string | null;
+  payment_method: string | null;
+  shipping_terms: string | null;
+  status: OfferVersionStatus;
+  created_at: string;
+  items: {
+    id: string;
+    product_code: string | null;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+  }[];
+};
+
 export async function getOfferHistoryForLead(
   supabase: TypedSupabaseClient,
   leadId: string
 ): Promise<LeadOfferHistory | null> {
-  const { data: offer, error: offerError } = await supabase
-    .from("offers")
-    .select("id")
-    .eq("lead_id", leadId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("get_offer_history_for_lead", { p_lead_id: leadId }).maybeSingle();
+  if (error) throw error;
+  if (!data || !data.offer_id) return null;
 
-  if (offerError) throw offerError;
-  if (!offer) return null;
+  const versions = (data.versions as unknown as OfferHistoryVersionRow[] | null) ?? [];
 
-  const versions = await getOfferVersions(supabase, offer.id);
-
-  return { offerId: offer.id, versions };
+  return {
+    offerId: data.offer_id,
+    versions: versions.map((v) => ({
+      id: v.id,
+      revisionNo: v.revision_no,
+      amount: v.amount,
+      currency: v.currency,
+      vatIncluded: v.vat_included,
+      validUntil: v.valid_until,
+      scopeSummary: v.scope_summary,
+      paymentMethod: v.payment_method,
+      shippingTerms: v.shipping_terms,
+      status: v.status,
+      createdAt: v.created_at,
+      items: v.items.map((item) => ({
+        id: item.id,
+        productCode: item.product_code,
+        productName: item.product_name,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+      })),
+    })),
+  };
 }
 
 export async function getOfferVersions(supabase: TypedSupabaseClient, offerId: string): Promise<OfferVersionItem[]> {

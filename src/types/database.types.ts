@@ -1320,6 +1320,40 @@ export type Database = {
           total_amount: number
         }[]
       }
+      get_offer_history_for_lead: {
+        Args: { p_lead_id: string }
+        Returns: {
+          offer_id: string
+          versions: Json
+        }[]
+      }
+      get_offers_for_partner: {
+        Args: { p_partner_id: string }
+        Returns: {
+          created_at: string
+          customer_name: string
+          id: string
+          latest_amount: number
+          latest_currency: string
+          lead_no: string
+          offer_no: string
+          status: string
+        }[]
+      }
+      get_offers_overview: {
+        Args: { p_limit?: number }
+        Returns: {
+          amount: number
+          created_at: string
+          currency: string
+          customer_name: string
+          id: string
+          lead_no: string
+          next_action_at: string
+          offer_no: string
+          status: string
+        }[]
+      }
       get_partner_performance: {
         Args: { p_from?: string; p_to?: string }
         Returns: {

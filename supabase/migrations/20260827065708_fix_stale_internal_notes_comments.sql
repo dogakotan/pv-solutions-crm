@@ -1,0 +1,3 @@
+COMMENT ON TABLE public.leads IS 'lead_no otomatik üretiliyor: private.generate_lead_no trigger fonksiyonu ile lead_no_sequences tablosu üzerinden (format: LEAD-YYYY-NNNN). internal_notes ayrı lead_internal_notes tablosuna taşındı (yalnızca pv_admin erişimi, bkz. move_internal_notes_to_pv_only_tables migration); general_notes bu tabloda kalmaya devam ediyor.';
+
+COMMENT ON TABLE public.partners IS 'internal_notes ayrı partner_internal_notes tablosuna taşındı (yalnızca pv_admin erişimi, bkz. move_internal_notes_to_pv_only_tables migration) — kolon-seviyesi maskeleme yerine ayrı tablo çözümü kullanıldı.';

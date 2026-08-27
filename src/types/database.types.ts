@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -1247,6 +1247,54 @@ export type Database = {
           id: string
           lead_no: string
           stage: string
+        }[]
+      }
+      get_admin_lead_kpis: {
+        Args: never
+        Returns: {
+          assigned_to_sales: number
+          awaiting_first_call: number
+          awaiting_partner: number
+          lost: number
+          new_leads: number
+          overdue_partner: number
+          proposal: number
+          survey: number
+          total: number
+          won: number
+        }[]
+      }
+      get_first_call_lead_kpis: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          contacted: number
+          due_today: number
+          new_assigned: number
+          ready_for_sales: number
+          unscored: number
+        }[]
+      }
+      get_partner_referral_kpis: {
+        Args: never
+        Returns: {
+          completed: number
+          negotiation: number
+          overdue: number
+          pending: number
+          proposal_preparing: number
+          survey_planned: number
+          total: number
+          unsuccessful: number
+        }[]
+      }
+      get_sales_lead_kpis: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          due_today: number
+          lost: number
+          overdue_partner: number
+          total: number
+          won: number
         }[]
       }
       health_check: { Args: never; Returns: boolean }

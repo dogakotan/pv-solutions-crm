@@ -245,43 +245,21 @@ function todayRange() {
 }
 
 export async function getAdminLeadKpis(supabase: TypedSupabaseClient) {
-  const [
-    { count: total },
-    { count: newLeads },
-    { count: awaitingFirstCall },
-    { count: assignedToSales },
-    { count: awaitingPartner },
-    { count: overduePartner },
-    { count: survey },
-    { count: proposal },
-    { count: won },
-    { count: lost },
-  ] = await Promise.all([
-    supabase.from("leads").select("id", { count: "exact", head: true }).is("deleted_at", null),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "new"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "new").is("first_call_user_id", null),
-    supabase.from("leads").select("id", { count: "exact", head: true }).not("sales_user_id", "is", null),
-    supabase.from("partner_referrals").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("partner_referrals").select("id", { count: "exact", head: true })
-      .eq("status", "pending").lt("response_due_at", new Date().toISOString()),
-    supabase.from("leads").select("id", { count: "exact", head: true }).in("stage", ["survey_scheduled", "survey_completed"]),
-    supabase.from("leads").select("id", { count: "exact", head: true }).in("stage", ["proposal_preparing", "proposal_sent"]),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "won"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "lost"),
-  ]);
+  const { data, error } = await supabase.rpc("get_admin_lead_kpis").single();
+  if (error) throw error;
 
-  const wonCount = won ?? 0;
-  const lostCount = lost ?? 0;
+  const wonCount = data.won ?? 0;
+  const lostCount = data.lost ?? 0;
 
   return {
-    total: total ?? 0,
-    newLeads: newLeads ?? 0,
-    awaitingFirstCall: awaitingFirstCall ?? 0,
-    assignedToSales: assignedToSales ?? 0,
-    awaitingPartner: awaitingPartner ?? 0,
-    overduePartner: overduePartner ?? 0,
-    survey: survey ?? 0,
-    proposal: proposal ?? 0,
+    total: data.total ?? 0,
+    newLeads: data.new_leads ?? 0,
+    awaitingFirstCall: data.awaiting_first_call ?? 0,
+    assignedToSales: data.assigned_to_sales ?? 0,
+    awaitingPartner: data.awaiting_partner ?? 0,
+    overduePartner: data.overdue_partner ?? 0,
+    survey: data.survey ?? 0,
+    proposal: data.proposal ?? 0,
     won: wonCount,
     lost: lostCount,
     conversionRate: wonCount + lostCount > 0 ? Math.round((wonCount / (wonCount + lostCount)) * 100) : 0,
@@ -363,61 +341,37 @@ export async function getActionItems(supabase: TypedSupabaseClient, limit = 20):
 export async function getFirstCallLeadKpis(supabase: TypedSupabaseClient) {
   const { start, end } = todayRange();
 
-  const [
-    { count: newAssigned },
-    { count: dueToday },
-    { count: contacted },
-    { count: unscored },
-    { count: readyForSales },
-  ] = await Promise.all([
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "new"),
-    supabase.from("leads").select("id", { count: "exact", head: true })
-      .gte("next_follow_up_at", start).lte("next_follow_up_at", end),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "contacted"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).is("lead_score", null).neq("stage", "new"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).not("lead_score", "is", null).is("sales_user_id", null),
-  ]);
+  const { data, error } = await supabase.rpc("get_first_call_lead_kpis", { p_start: start, p_end: end }).single();
+  if (error) throw error;
 
   return {
-    newAssigned: newAssigned ?? 0,
-    dueToday: dueToday ?? 0,
-    contacted: contacted ?? 0,
-    unscored: unscored ?? 0,
-    readyForSales: readyForSales ?? 0,
+    newAssigned: data.new_assigned ?? 0,
+    dueToday: data.due_today ?? 0,
+    contacted: data.contacted ?? 0,
+    unscored: data.unscored ?? 0,
+    readyForSales: data.ready_for_sales ?? 0,
   };
 }
 
 export async function getSalesLeadKpis(supabase: TypedSupabaseClient) {
   const { start, end } = todayRange();
 
-  const [
-    { count: total },
-    { count: dueToday },
-    { count: won },
-    { count: lost },
-    { count: overduePartner },
-  ] = await Promise.all([
-    supabase.from("leads").select("id", { count: "exact", head: true }).is("deleted_at", null),
-    supabase.from("leads").select("id", { count: "exact", head: true })
-      .gte("next_follow_up_at", start).lte("next_follow_up_at", end),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "won"),
-    supabase.from("leads").select("id", { count: "exact", head: true }).eq("stage", "lost"),
-    // RLS (private.referral_lead_owned_by_me) zaten bu sorguyu çağıranın
-    // kendi leadlerine ait referral'larla sınırlıyor.
-    supabase.from("partner_referrals").select("id", { count: "exact", head: true })
-      .eq("status", "pending").lt("response_due_at", new Date().toISOString()),
-  ]);
+  // RLS (private.referral_lead_owned_by_me) zaten bu RPC'yi çağıranın
+  // kendi leadlerine ait referral'larla sınırlıyor — fonksiyon SECURITY
+  // DEFINER değil, invoker olarak çağıranın rolüyle çalışıyor.
+  const { data, error } = await supabase.rpc("get_sales_lead_kpis", { p_start: start, p_end: end }).single();
+  if (error) throw error;
 
-  const wonCount = won ?? 0;
-  const lostCount = lost ?? 0;
+  const wonCount = data.won ?? 0;
+  const lostCount = data.lost ?? 0;
 
   return {
-    total: total ?? 0,
-    dueToday: dueToday ?? 0,
+    total: data.total ?? 0,
+    dueToday: data.due_today ?? 0,
     won: wonCount,
     lost: lostCount,
     conversionRate: wonCount + lostCount > 0 ? Math.round((wonCount / (wonCount + lostCount)) * 100) : 0,
-    overduePartner: overduePartner ?? 0,
+    overduePartner: data.overdue_partner ?? 0,
   };
 }
 
@@ -515,41 +469,21 @@ export async function getPartnerSiteVisits(supabase: TypedSupabaseClient): Promi
 }
 
 export async function getPartnerReferralKpis(supabase: TypedSupabaseClient) {
-  const now = new Date().toISOString();
+  const { data, error } = await supabase.rpc("get_partner_referral_kpis").single();
+  if (error) throw error;
 
-  const [
-    { count: total },
-    { count: pending },
-    { count: overdue },
-    { count: completed },
-    { count: unsuccessful },
-    { count: surveyPlanned },
-    { count: proposalPreparing },
-    { count: negotiation },
-  ] = await Promise.all([
-    supabase.from("partner_referrals").select("id", { count: "exact", head: true }),
-    supabase.from("partner_referrals").select("id", { count: "exact", head: true }).eq("status", "pending"),
-    supabase.from("partner_referrals").select("id", { count: "exact", head: true })
-      .eq("status", "pending").lt("response_due_at", now),
-    supabase.from("partner_referrals").select("id", { count: "exact", head: true }).eq("status", "completed"),
-    supabase.from("partner_referrals").select("id", { count: "exact", head: true }).in("status", ["rejected", "cancelled", "expired"]),
-    supabase.from("partner_referrals").select("id, leads!inner(stage)", { count: "exact", head: true }).eq("leads.stage", "survey_scheduled"),
-    supabase.from("partner_referrals").select("id, leads!inner(stage)", { count: "exact", head: true }).eq("leads.stage", "proposal_preparing"),
-    supabase.from("partner_referrals").select("id, leads!inner(stage)", { count: "exact", head: true }).eq("leads.stage", "negotiation"),
-  ]);
-
-  const totalCount = total ?? 0;
-  const completedCount = completed ?? 0;
+  const totalCount = data.total ?? 0;
+  const completedCount = data.completed ?? 0;
 
   return {
     total: totalCount,
-    pending: pending ?? 0,
-    overdue: overdue ?? 0,
-    surveyPlanned: surveyPlanned ?? 0,
-    proposalPreparing: proposalPreparing ?? 0,
-    negotiation: negotiation ?? 0,
+    pending: data.pending ?? 0,
+    overdue: data.overdue ?? 0,
+    surveyPlanned: data.survey_planned ?? 0,
+    proposalPreparing: data.proposal_preparing ?? 0,
+    negotiation: data.negotiation ?? 0,
     completed: completedCount,
-    unsuccessful: unsuccessful ?? 0,
+    unsuccessful: data.unsuccessful ?? 0,
     conversionRate: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
   };
 }

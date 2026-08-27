@@ -1249,6 +1249,19 @@ export type Database = {
           stage: string
         }[]
       }
+      get_action_items: {
+        Args: { p_limit?: number }
+        Returns: {
+          city: string
+          customer_name: string
+          due_at: string
+          id: string
+          lead_id: string
+          lead_no: string
+          reason: string
+          stage: string
+        }[]
+      }
       get_admin_lead_kpis: {
         Args: never
         Returns: {

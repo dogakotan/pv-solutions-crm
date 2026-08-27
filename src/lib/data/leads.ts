@@ -277,65 +277,20 @@ export type ActionItem = {
   dueAt: string;
 };
 
-type ActionItemReferralLeadEmbed =
-  | { id: string; lead_no: string; customer_name: string; city: string; stage: string }
-  | { id: string; lead_no: string; customer_name: string; city: string; stage: string }[]
-  | null;
-
 export async function getActionItems(supabase: TypedSupabaseClient, limit = 20): Promise<ActionItem[]> {
-  const now = new Date().toISOString();
+  const { data, error } = await supabase.rpc("get_action_items", { p_limit: limit });
+  if (error) throw error;
 
-  const [followUpRes, referralRes] = await Promise.all([
-    supabase
-      .from("leads")
-      .select("id, lead_no, customer_name, city, stage, next_follow_up_at")
-      .is("deleted_at", null)
-      .not("stage", "in", "(won,lost,sale_registered)")
-      .not("next_follow_up_at", "is", null)
-      .lt("next_follow_up_at", now)
-      .order("next_follow_up_at", { ascending: true })
-      .limit(limit),
-    supabase
-      .from("partner_referrals")
-      .select("id, response_due_at, leads(id, lead_no, customer_name, city, stage)")
-      .eq("status", "pending")
-      .lt("response_due_at", now)
-      .order("response_due_at", { ascending: true })
-      .limit(limit),
-  ]);
-
-  if (followUpRes.error) throw followUpRes.error;
-  if (referralRes.error) throw referralRes.error;
-
-  const followUpItems: ActionItem[] = (followUpRes.data ?? []).map((row) => ({
-    id: `lead-${row.id}`,
-    leadId: row.id,
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    leadId: row.lead_id,
     leadNo: row.lead_no ?? "",
     customerName: row.customer_name,
     city: row.city,
     stage: row.stage as LeadStage,
-    reason: "follow_up_overdue",
-    dueAt: row.next_follow_up_at as string,
+    reason: row.reason as ActionItem["reason"],
+    dueAt: row.due_at,
   }));
-
-  const referralItems: ActionItem[] = (referralRes.data ?? []).flatMap((row) => {
-    const lead = extractLead(row.leads as ActionItemReferralLeadEmbed);
-    if (!lead) return [];
-    return [{
-      id: `referral-${row.id}`,
-      leadId: lead.id,
-      leadNo: lead.lead_no,
-      customerName: lead.customer_name,
-      city: lead.city,
-      stage: lead.stage as LeadStage,
-      reason: "partner_response_overdue" as const,
-      dueAt: row.response_due_at,
-    }];
-  });
-
-  return [...followUpItems, ...referralItems]
-    .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
-    .slice(0, limit);
 }
 
 export async function getFirstCallLeadKpis(supabase: TypedSupabaseClient) {

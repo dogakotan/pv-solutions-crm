@@ -16,7 +16,7 @@ export type PartnerStatus = "candidate" | "active" | "suspended" | "inactive";
  */
 export const APPLICATION_AREAS = ["Tarımsal Sulama", "Off Grid", "Hibrit", "Depolamalı"] as const;
 
-export type PartnerStats = {
+type PartnerStats = {
   totalLeads: number;
   activeLeads: number;
   sales: number;

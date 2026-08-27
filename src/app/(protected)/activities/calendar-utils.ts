@@ -63,7 +63,7 @@ export function formatWeekRangeLabel(monday: Date): string {
   return `${startLabel} - ${endLabel}`;
 }
 
-export function getMonthStart(date: Date): Date {
+function getMonthStart(date: Date): Date {
   const d = new Date(date.getFullYear(), date.getMonth(), 1);
   d.setHours(0, 0, 0, 0);
   return d;

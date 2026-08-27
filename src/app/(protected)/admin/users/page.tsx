@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getStaffUsers } from "@/lib/data/users";
 import { updateUserRole, updateUserActive } from "./actions";
 import { AddStaffUserForm } from "./add-staff-user-form";
 import { SetHeaderContent } from "@/components/page-header-slot";
@@ -14,31 +15,9 @@ const ROLE_LABELS: Record<DbRole, string> = {
 
 const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [DbRole, string][];
 
-type RoleEmbed = { role: string } | { role: string }[] | null;
-
-function extractRole(embed: RoleEmbed): string | null {
-  if (!embed) return null;
-  if (Array.isArray(embed)) return embed[0]?.role ?? null;
-  return embed.role;
-}
-
 export default async function AdminUsersPage() {
   const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, is_active, partner_id, user_role_assignments!user_role_assignments_user_id_fkey(role)")
-    .order("created_at", { ascending: true });
-
-  if (error) throw error;
-
-  const users = (data ?? []).map((row) => ({
-    id: row.id,
-    fullName: row.full_name,
-    email: row.email,
-    isActive: row.is_active,
-    role: extractRole(row.user_role_assignments as RoleEmbed),
-  }));
+  const users = await getStaffUsers(supabase);
 
   return (
     <div className="flex flex-col gap-6">

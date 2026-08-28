@@ -7,6 +7,7 @@ import { CheckCircle2 } from "lucide-react";
 const REASON_STYLES: Record<ActionItem["reason"], { label: string; className: string }> = {
   follow_up_overdue: { label: "Takip Gecikmiş", className: "bg-red-50 text-red-700" },
   partner_response_overdue: { label: "Partner Yanıtı Gecikmiş", className: "bg-amber-50 text-amber-700" },
+  ready_for_sales_stale: { label: "Satışa Devir Gecikmiş", className: "bg-amber-50 text-amber-700" },
 };
 
 export function ActionItemsTable({

@@ -273,7 +273,7 @@ export type ActionItem = {
   customerName: string;
   city: string;
   stage: LeadStage;
-  reason: "follow_up_overdue" | "partner_response_overdue";
+  reason: "follow_up_overdue" | "partner_response_overdue" | "ready_for_sales_stale";
   dueAt: string;
 };
 

@@ -1460,6 +1460,7 @@ export type Database = {
         Returns: {
           full_name: string
           id: string
+          open_lead_count: number
         }[]
       }
       provision_partner_employee: {

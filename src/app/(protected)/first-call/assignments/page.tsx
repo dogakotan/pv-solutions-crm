@@ -34,7 +34,10 @@ async function AssignmentQueue() {
   return (
     <LeadAssignmentQueue
       leads={leads}
-      assignees={salesUsers.map((user) => ({ id: user.id, label: user.fullName }))}
+      assignees={salesUsers.map((user) => ({
+        id: user.id,
+        label: `${user.fullName} (${user.openLeadCount} açık lead)`,
+      }))}
       assignAction={assignToSales}
       selectName="salesUserId"
       selectPlaceholder="Satış çalışanı seç"

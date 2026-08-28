@@ -19,6 +19,10 @@ export type ActiveUserOption = {
   fullName: string;
 };
 
+export type SalesUserOption = ActiveUserOption & {
+  openLeadCount: number;
+};
+
 export type ActivePartnerOption = {
   id: string;
   name: string;
@@ -65,12 +69,16 @@ export async function getLeadsNeedingPartnerAssignment(
   }));
 }
 
-export async function getActiveSalesUsers(supabase: TypedSupabaseClient): Promise<ActiveUserOption[]> {
+export async function getActiveSalesUsers(supabase: TypedSupabaseClient): Promise<SalesUserOption[]> {
   const { data, error } = await supabase.rpc("list_active_sales_users");
 
   if (error) throw error;
 
-  return (data ?? []).map((row) => ({ id: row.id, fullName: row.full_name }));
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    fullName: row.full_name,
+    openLeadCount: row.open_lead_count,
+  }));
 }
 
 export async function getActivePvOwnerOptions(supabase: TypedSupabaseClient): Promise<ActiveUserOption[]> {

@@ -18,6 +18,9 @@ type Summary = { unreadCount: number; notifications: NotificationItem[] };
 export function NotificationBellPopover() {
   const [open, setOpen] = useState(false);
   const [summary, setSummary] = useState<Summary>({ unreadCount: 0, notifications: [] });
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [markAllPending, setMarkAllPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -59,15 +62,29 @@ export function NotificationBellPopover() {
   }, [open]);
 
   async function handleMarkRead(id: string) {
-    const formData = new FormData();
-    formData.set("notificationId", id);
-    await markNotificationRead(formData);
-    await load();
+    setPendingId(id);
+    setError(null);
+    try {
+      await markNotificationRead(id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız oldu.");
+    } finally {
+      setPendingId(null);
+    }
   }
 
   async function handleMarkAllRead() {
-    await markAllNotificationsRead();
-    await load();
+    setMarkAllPending(true);
+    setError(null);
+    try {
+      await markAllNotificationsRead();
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "İşlem başarısız oldu.");
+    } finally {
+      setMarkAllPending(false);
+    }
   }
 
   const { unreadCount, notifications } = summary;
@@ -94,11 +111,18 @@ export function NotificationBellPopover() {
           <div className="flex items-center justify-between border-b border-card-border px-4 py-3">
             <span className="text-sm font-medium text-foreground">Bildirimler</span>
             {unreadCount > 0 && (
-              <button type="button" onClick={handleMarkAllRead} className="text-xs text-brand hover:underline">
-                Tümünü okundu işaretle
+              <button
+                type="button"
+                onClick={handleMarkAllRead}
+                disabled={markAllPending}
+                className="text-xs text-brand hover:underline disabled:opacity-50"
+              >
+                {markAllPending ? "İşaretleniyor..." : "Tümünü okundu işaretle"}
               </button>
             )}
           </div>
+
+          {error && <p className="border-b border-card-border px-4 py-2 text-xs text-red-600">{error}</p>}
 
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
@@ -139,9 +163,10 @@ export function NotificationBellPopover() {
                       <button
                         type="button"
                         onClick={() => handleMarkRead(n.id)}
-                        className="shrink-0 whitespace-nowrap rounded-lg border border-card-border px-2 py-1 text-[11px] text-foreground hover:bg-background"
+                        disabled={pendingId === n.id}
+                        className="shrink-0 whitespace-nowrap rounded-lg border border-card-border px-2 py-1 text-[11px] text-foreground hover:bg-background disabled:opacity-50"
                       >
-                        Okundu
+                        {pendingId === n.id ? "..." : "Okundu"}
                       </button>
                     )}
                   </div>

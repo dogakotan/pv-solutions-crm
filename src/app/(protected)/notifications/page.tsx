@@ -5,6 +5,7 @@ import { getMyNotifications } from "@/lib/data/notifications";
 import { EmptyState } from "@/components/empty-state";
 import { SetHeaderContent } from "@/components/page-header-slot";
 import { markNotificationRead, markAllNotificationsRead } from "./actions";
+import { MarkReadButton } from "./mark-read-button";
 
 export default async function NotificationsPage() {
   const supabase = await createClient();
@@ -19,14 +20,12 @@ export default async function NotificationsPage() {
 
       {unreadCount > 0 && (
         <div className="flex justify-end">
-          <form action={markAllNotificationsRead}>
-            <button
-              type="submit"
-              className="rounded-lg border border-card-border px-3 py-1.5 text-sm text-foreground hover:bg-background"
-            >
-              Tümünü okundu işaretle
-            </button>
-          </form>
+          <MarkReadButton
+            action={markAllNotificationsRead}
+            label="Tümünü okundu işaretle"
+            pendingLabel="İşaretleniyor..."
+            className="rounded-lg border border-card-border px-3 py-1.5 text-sm text-foreground hover:bg-background disabled:opacity-50"
+          />
         </div>
       )}
 
@@ -69,15 +68,12 @@ export default async function NotificationsPage() {
                   body
                 )}
                 {!n.readAt && (
-                  <form action={markNotificationRead}>
-                    <input type="hidden" name="notificationId" value={n.id} />
-                    <button
-                      type="submit"
-                      className="whitespace-nowrap rounded-lg border border-card-border px-2 py-1 text-xs text-foreground hover:bg-background"
-                    >
-                      Okundu işaretle
-                    </button>
-                  </form>
+                  <MarkReadButton
+                    action={markNotificationRead.bind(null, n.id)}
+                    label="Okundu işaretle"
+                    pendingLabel="İşaretleniyor..."
+                    className="whitespace-nowrap rounded-lg border border-card-border px-2 py-1 text-xs text-foreground hover:bg-background disabled:opacity-50"
+                  />
                 )}
               </div>
             );

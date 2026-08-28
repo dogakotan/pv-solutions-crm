@@ -21,12 +21,16 @@ export function LeadsTable({
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<LeadStage | "all">("all");
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [claimError, setClaimError] = useState<{ id: string; message: string } | null>(null);
 
   async function handleClaim(leadId: string) {
     if (!onClaim) return;
     setClaimingId(leadId);
+    setClaimError(null);
     try {
       await onClaim(leadId);
+    } catch (err) {
+      setClaimError({ id: leadId, message: err instanceof Error ? err.message : "Lead atanamadı." });
     } finally {
       setClaimingId(null);
     }
@@ -117,14 +121,19 @@ export function LeadsTable({
                   {onClaim && (
                     <td className="px-4 py-3">
                       {lead.firstCallUserId === null && (
-                        <button
-                          type="button"
-                          onClick={() => handleClaim(lead.id)}
-                          disabled={claimingId === lead.id}
-                          className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background disabled:opacity-50"
-                        >
-                          {claimingId === lead.id ? "Atanıyor..." : "Bana Ata"}
-                        </button>
+                        <div className="flex flex-col items-start gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleClaim(lead.id)}
+                            disabled={claimingId === lead.id}
+                            className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background disabled:opacity-50"
+                          >
+                            {claimingId === lead.id ? "Atanıyor..." : "Bana Ata"}
+                          </button>
+                          {claimError?.id === lead.id && (
+                            <span className="text-xs text-red-600">{claimError.message}</span>
+                          )}
+                        </div>
                       )}
                     </td>
                   )}

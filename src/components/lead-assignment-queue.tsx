@@ -34,6 +34,8 @@ export function LeadAssignmentQueue({
   const [bulkAssigneeId, setBulkAssigneeId] = useState("");
   const [bulkPending, setBulkPending] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  const [pendingLeadId, setPendingLeadId] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null);
   const rowSelectRefs = useRef<Record<string, HTMLSelectElement | null>>({});
 
   const canSuggest = assignees.some((a) => a.openLeadCount !== undefined);
@@ -57,6 +59,18 @@ export function LeadAssignmentQueue({
     if (!best) return;
     const el = rowSelectRefs.current[leadId];
     if (el) el.value = best.id;
+  }
+
+  async function handleRowAssign(leadId: string, formData: FormData) {
+    setPendingLeadId(leadId);
+    setRowError(null);
+    try {
+      await assignAction(formData);
+    } catch (err) {
+      setRowError({ id: leadId, message: err instanceof Error ? err.message : "Atama başarısız oldu." });
+    } finally {
+      setPendingLeadId(null);
+    }
   }
 
   async function handleBulkAssign() {
@@ -166,41 +180,53 @@ export function LeadAssignmentQueue({
                       <LeadStageBadge stage={lead.stage} />
                     </td>
                     <td className="px-4 py-3">
-                      <form action={assignAction} className="flex items-center gap-2">
-                        <input type="hidden" name="leadId" value={lead.id} />
-                        <select
-                          ref={(el) => {
-                            rowSelectRefs.current[lead.id] = el;
-                          }}
-                          name={selectName}
-                          defaultValue=""
-                          required
-                          className="rounded-lg border border-card-border px-2 py-1 text-sm"
-                        >
-                          <option value="" disabled>
-                            {selectPlaceholder}
-                          </option>
-                          {assignees.map((assignee) => (
-                            <option key={assignee.id} value={assignee.id}>
-                              {assignee.label}
-                            </option>
-                          ))}
-                        </select>
-                        {canSuggest && (
-                          <button
-                            type="button"
-                            onClick={() => suggestFor(lead.id)}
-                            className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background"
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleRowAssign(lead.id, new FormData(e.currentTarget));
+                        }}
+                        className="flex flex-col items-start gap-1"
+                      >
+                        <div className="flex items-center gap-2">
+                          <input type="hidden" name="leadId" value={lead.id} />
+                          <select
+                            ref={(el) => {
+                              rowSelectRefs.current[lead.id] = el;
+                            }}
+                            name={selectName}
+                            defaultValue=""
+                            required
+                            className="rounded-lg border border-card-border px-2 py-1 text-sm"
                           >
-                            Öner
+                            <option value="" disabled>
+                              {selectPlaceholder}
+                            </option>
+                            {assignees.map((assignee) => (
+                              <option key={assignee.id} value={assignee.id}>
+                                {assignee.label}
+                              </option>
+                            ))}
+                          </select>
+                          {canSuggest && (
+                            <button
+                              type="button"
+                              onClick={() => suggestFor(lead.id)}
+                              className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background"
+                            >
+                              Öner
+                            </button>
+                          )}
+                          <button
+                            type="submit"
+                            disabled={pendingLeadId === lead.id}
+                            className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background disabled:opacity-50"
+                          >
+                            {pendingLeadId === lead.id ? "Atanıyor..." : "Ata"}
                           </button>
+                        </div>
+                        {rowError?.id === lead.id && (
+                          <span className="text-xs text-red-600">{rowError.message}</span>
                         )}
-                        <button
-                          type="submit"
-                          className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background"
-                        >
-                          Ata
-                        </button>
                       </form>
                     </td>
                   </tr>

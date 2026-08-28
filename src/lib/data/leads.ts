@@ -323,6 +323,25 @@ export async function getFirstCallQualifiedTrend(
   }));
 }
 
+export type SourcedOutcomes = {
+  total: number;
+  won: number;
+  lost: number;
+  inProgress: number;
+};
+
+export async function getFirstCallSourcedOutcomes(supabase: TypedSupabaseClient): Promise<SourcedOutcomes> {
+  const { data, error } = await supabase.rpc("get_first_call_sourced_outcomes").single();
+  if (error) throw error;
+
+  return {
+    total: data.total ?? 0,
+    won: data.won ?? 0,
+    lost: data.lost ?? 0,
+    inProgress: data.in_progress ?? 0,
+  };
+}
+
 export async function getSalesLeadKpis(supabase: TypedSupabaseClient) {
   const { start, end } = todayRange();
 

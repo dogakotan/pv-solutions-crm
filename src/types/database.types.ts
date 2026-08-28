@@ -1294,6 +1294,15 @@ export type Database = {
           week_start: string
         }[]
       }
+      get_first_call_sourced_outcomes: {
+        Args: never
+        Returns: {
+          in_progress: number
+          lost: number
+          total: number
+          won: number
+        }[]
+      }
       get_lead_funnel: {
         Args: { p_from?: string; p_to?: string }
         Returns: {

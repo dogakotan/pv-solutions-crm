@@ -4,7 +4,7 @@ import { ActionItemsTable } from "@/components/action-items-table";
 import { FirstCallKpiGrid } from "@/components/first-call-kpi-grid";
 import { KpiGridSkeleton, TableSkeleton, CardSkeleton } from "@/components/skeletons";
 import { SetHeaderContent } from "@/components/page-header-slot";
-import { getActionItems, getFirstCallQualifiedTrend } from "@/lib/data/leads";
+import { getActionItems, getFirstCallQualifiedTrend, getFirstCallSourcedOutcomes } from "@/lib/data/leads";
 
 export default function FirstCallDashboardPage() {
   return (
@@ -31,6 +31,10 @@ export default function FirstCallDashboardPage() {
       <Suspense fallback={<CardSkeleton lines={6} />}>
         <QualifiedTrendCard />
       </Suspense>
+
+      <Suspense fallback={<CardSkeleton lines={4} />}>
+        <SourcedOutcomesCard />
+      </Suspense>
     </div>
   );
 }
@@ -40,6 +44,43 @@ async function FirstCallActionItemsSection() {
   const items = await getActionItems(supabase);
 
   return <ActionItemsTable items={items} />;
+}
+
+async function SourcedOutcomesCard() {
+  const supabase = await createClient();
+  const outcomes = await getFirstCallSourcedOutcomes(supabase);
+  const wonRate = outcomes.total > 0 ? Math.round((outcomes.won / outcomes.total) * 100) : 0;
+
+  return (
+    <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
+      <h2 className="mb-4 text-sm font-medium text-foreground">Kaynakladığım Leadlerin Sonucu</h2>
+      {outcomes.total === 0 ? (
+        <p className="text-sm text-muted">Henüz satışa devrettiğiniz bir lead yok.</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div>
+            <p className="text-xs text-muted">Devredilen</p>
+            <p className="text-xl font-semibold text-foreground">{outcomes.total}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">Kazanılan</p>
+            <p className="text-xl font-semibold text-green-700">{outcomes.won}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">Kaybedilen</p>
+            <p className="text-xl font-semibold text-red-700">{outcomes.lost}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">Açık</p>
+            <p className="text-xl font-semibold text-foreground">{outcomes.inProgress}</p>
+          </div>
+        </div>
+      )}
+      {outcomes.total > 0 && (
+        <p className="mt-3 text-xs text-muted">Kazanma oranı: %{wonRate}</p>
+      )}
+    </div>
+  );
 }
 
 async function QualifiedTrendCard() {

@@ -30,6 +30,7 @@ export function NewLeadForm() {
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [sourceOption, setSourceOption] = useState("");
   const [sourceOther, setSourceOther] = useState("");
+  const [showQualification, setShowQualification] = useState(false);
 
   function handleConfirmAnyway() {
     setConfirmDuplicate(true);
@@ -107,8 +108,29 @@ export function NewLeadForm() {
       </div>
 
       <div className="border-t border-card-border pt-4">
-        <p className="mb-3 text-sm font-medium text-foreground">Görüşme Detayları (opsiyonel)</p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-medium text-foreground">Görüşme Detayları (opsiyonel)</p>
+          <button
+            type="button"
+            onClick={() => setShowQualification((v) => !v)}
+            className="text-xs font-medium text-brand hover:underline"
+          >
+            {showQualification ? "Gizle" : "Nitelendirme Ekle"}
+          </button>
+        </div>
+        {!showQualification && (
+          <p className="text-xs text-muted">
+            Hızlı kayıt için bu bölümü atlayabilirsiniz — lead oluşturulduktan sonra lead detay
+            sayfasından da nitelendirebilirsiniz.
+          </p>
+        )}
+        <div
+          className={
+            showQualification
+              ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+              : "hidden"
+          }
+        >
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Durum (Puan)</label>
             <select name="leadScore" defaultValue="" className={inputClass}>

@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getStaffUsers } from "@/lib/data/users";
 import { updateUserRole, updateUserActive } from "./actions";
 import { AddStaffUserForm } from "./add-staff-user-form";
+import { UsersTable } from "./users-table";
 import { SetHeaderContent } from "@/components/page-header-slot";
 import type { DbRole } from "@/lib/auth/roles";
 
@@ -34,72 +35,12 @@ export default async function AdminUsersPage() {
         <AddStaffUserForm />
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-card-border bg-card shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-card-border bg-background text-xs font-medium uppercase tracking-wide text-muted">
-            <tr>
-              <th className="px-4 py-3">Ad Soyad</th>
-              <th className="px-4 py-3">E-posta</th>
-              <th className="px-4 py-3">Rol</th>
-              <th className="px-4 py-3">Durum</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((user) => (
-              <tr key={user.id} className="border-b border-card-border last:border-0">
-                <td className="px-4 py-3 font-medium text-foreground">{user.fullName || "—"}</td>
-                <td className="px-4 py-3 text-muted">{user.email}</td>
-                <td className="px-4 py-3">
-                  <form action={updateUserRole} className="flex items-center gap-2">
-                    <input type="hidden" name="userId" value={user.id} />
-                    <select
-                      name="role"
-                      defaultValue={user.role ?? ""}
-                      className="rounded-lg border border-card-border px-2 py-1 text-sm"
-                    >
-                      <option value="" disabled>
-                        Rol seç
-                      </option>
-                      {ROLE_OPTIONS.map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background"
-                    >
-                      Kaydet
-                    </button>
-                  </form>
-                </td>
-                <td className="px-4 py-3">
-                  <form action={updateUserActive} className="flex items-center gap-2">
-                    <input type="hidden" name="userId" value={user.id} />
-                    <input type="hidden" name="isActive" value={String(!user.isActive)} />
-                    <span
-                      className={
-                        user.isActive
-                          ? "inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700"
-                          : "inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-medium text-red-700"
-                      }
-                    >
-                      {user.isActive ? "Aktif" : "Pasif"}
-                    </span>
-                    <button
-                      type="submit"
-                      className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background"
-                    >
-                      {user.isActive ? "Pasif yap" : "Aktif yap"}
-                    </button>
-                  </form>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <UsersTable
+        users={users}
+        roleOptions={ROLE_OPTIONS}
+        updateRoleAction={updateUserRole}
+        updateActiveAction={updateUserActive}
+      />
     </div>
   );
 }

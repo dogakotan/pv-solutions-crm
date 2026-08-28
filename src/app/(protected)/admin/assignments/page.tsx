@@ -9,7 +9,7 @@ import {
 import { LeadAssignmentQueue } from "@/components/lead-assignment-queue";
 import { TableSkeleton } from "@/components/skeletons";
 import { SetHeaderContent } from "@/components/page-header-slot";
-import { assignToSales, assignToPartner } from "./actions";
+import { assignToSales, assignManyToSales, assignToPartner } from "./actions";
 
 export default function AdminAssignmentsPage() {
   return (
@@ -47,8 +47,10 @@ async function SalesAssignmentQueueSection() {
       assignees={salesUsers.map((user) => ({
         id: user.id,
         label: `${user.fullName} (${user.openLeadCount} açık lead)`,
+        openLeadCount: user.openLeadCount,
       }))}
       assignAction={assignToSales}
+      bulkAssignAction={assignManyToSales}
       selectName="salesUserId"
       selectPlaceholder="Satış çalışanı seç"
       title="Satış Çalışanına Atama Bekleyen Leadler"

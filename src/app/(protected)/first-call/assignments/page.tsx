@@ -4,7 +4,7 @@ import { getLeadsNeedingSalesAssignment, getActiveSalesUsers } from "@/lib/data/
 import { LeadAssignmentQueue } from "@/components/lead-assignment-queue";
 import { TableSkeleton } from "@/components/skeletons";
 import { SetHeaderContent } from "@/components/page-header-slot";
-import { assignToSales } from "./actions";
+import { assignToSales, assignManyToSales } from "./actions";
 
 export default function FirstCallAssignmentsPage() {
   return (
@@ -37,8 +37,10 @@ async function AssignmentQueue() {
       assignees={salesUsers.map((user) => ({
         id: user.id,
         label: `${user.fullName} (${user.openLeadCount} açık lead)`,
+        openLeadCount: user.openLeadCount,
       }))}
       assignAction={assignToSales}
+      bulkAssignAction={assignManyToSales}
       selectName="salesUserId"
       selectPlaceholder="Satış çalışanı seç"
       title="Satış Çalışanına Atama Bekleyen Leadler"

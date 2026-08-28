@@ -14,11 +14,22 @@ import {
 
 const initialState: NewLeadState = {};
 
+const SOURCE_OPTIONS = [
+  { value: "google_ads", label: "Google Ads" },
+  { value: "meta_ads", label: "Meta / Instagram Reklamı" },
+  { value: "web_form", label: "Web Formu" },
+  { value: "referral", label: "Referans" },
+  { value: "inbound_call", label: "Gelen Çağrı" },
+  { value: "other", label: "Diğer" },
+];
+
 export function NewLeadForm() {
   const [state, formAction, pending] = useActionState(createLead, initialState);
   const [confirmDuplicate, setConfirmDuplicate] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const [sourceOption, setSourceOption] = useState("");
+  const [sourceOther, setSourceOther] = useState("");
 
   function handleConfirmAnyway() {
     setConfirmDuplicate(true);
@@ -55,10 +66,44 @@ export function NewLeadForm() {
           <label className="text-sm font-medium text-foreground">Şehir</label>
           <input name="city" required className={inputClass} />
         </div>
-        <div className="flex flex-col gap-1 lg:col-span-2">
+        <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-foreground">Kaynak</label>
-          <input name="source" required placeholder="Web formu, referans, reklam..." className={inputClass} />
+          <select
+            value={sourceOption}
+            onChange={(e) => setSourceOption(e.target.value)}
+            required
+            className={inputClass}
+          >
+            <option value="" disabled>
+              Seçiniz
+            </option>
+            {SOURCE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
         </div>
+        {sourceOption === "other" && (
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-foreground">Kaynak (belirtin)</label>
+            <input
+              value={sourceOther}
+              onChange={(e) => setSourceOther(e.target.value)}
+              required
+              className={inputClass}
+            />
+          </div>
+        )}
+        <input
+          type="hidden"
+          name="source"
+          value={
+            sourceOption === "other"
+              ? sourceOther
+              : (SOURCE_OPTIONS.find((o) => o.value === sourceOption)?.label ?? "")
+          }
+        />
       </div>
 
       <div className="border-t border-card-border pt-4">

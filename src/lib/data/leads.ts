@@ -23,10 +23,14 @@ export type LeadListItem = {
   stage: LeadStage;
   leadScore: LeadScore | null;
   nextFollowUpAt: string | null;
+  firstCallUserId: string | null;
 };
 
 function mapLead(
-  row: Pick<LeadRow, "id" | "lead_no" | "customer_name" | "city" | "stage" | "lead_score" | "next_follow_up_at">
+  row: Pick<
+    LeadRow,
+    "id" | "lead_no" | "customer_name" | "city" | "stage" | "lead_score" | "next_follow_up_at" | "first_call_user_id"
+  >
 ): LeadListItem {
   return {
     id: row.id,
@@ -36,13 +40,14 @@ function mapLead(
     stage: row.stage as LeadStage,
     leadScore: row.lead_score as LeadScore | null,
     nextFollowUpAt: row.next_follow_up_at,
+    firstCallUserId: row.first_call_user_id,
   };
 }
 
 export async function getVisibleLeads(supabase: TypedSupabaseClient, limit = 50): Promise<LeadListItem[]> {
   const { data, error } = await supabase
     .from("leads")
-    .select("id, lead_no, customer_name, city, stage, lead_score, next_follow_up_at")
+    .select("id, lead_no, customer_name, city, stage, lead_score, next_follow_up_at, first_call_user_id")
     .order("created_at", { ascending: false })
     .limit(limit);
 

@@ -12,12 +12,25 @@ const inputClass =
 export function LeadsTable({
   leads,
   emptyMessage = "Görüntülenecek lead bulunamadı.",
+  onClaim,
 }: {
   leads: LeadListItem[];
   emptyMessage?: string;
+  onClaim?: (leadId: string) => void | Promise<void>;
 }) {
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<LeadStage | "all">("all");
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+
+  async function handleClaim(leadId: string) {
+    if (!onClaim) return;
+    setClaimingId(leadId);
+    try {
+      await onClaim(leadId);
+    } finally {
+      setClaimingId(null);
+    }
+  }
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -79,6 +92,7 @@ export function LeadsTable({
                 <th className="px-4 py-3">Aşama</th>
                 <th className="px-4 py-3">Durum</th>
                 <th className="px-4 py-3">Sonraki Takip</th>
+                {onClaim && <th className="px-4 py-3" />}
               </tr>
             </thead>
             <tbody>
@@ -100,6 +114,20 @@ export function LeadsTable({
                   <td className="px-4 py-3 text-muted">
                     {lead.nextFollowUpAt ? new Date(lead.nextFollowUpAt).toLocaleDateString("tr-TR") : "—"}
                   </td>
+                  {onClaim && (
+                    <td className="px-4 py-3">
+                      {lead.firstCallUserId === null && (
+                        <button
+                          type="button"
+                          onClick={() => handleClaim(lead.id)}
+                          disabled={claimingId === lead.id}
+                          className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background disabled:opacity-50"
+                        >
+                          {claimingId === lead.id ? "Atanıyor..." : "Bana Ata"}
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

@@ -15,7 +15,7 @@ export default function FirstCallLeadPoolPage() {
         <h1 className="truncate text-lg font-semibold text-foreground">Lead Havuzu</h1>
       </SetHeaderContent>
 
-      <p className="-mt-4 text-sm text-muted">Size atanan ve girdiğiniz leadler</p>
+      <p className="-mt-4 text-sm text-muted">Size atanan, girdiğiniz ve sahiplenilmemiş leadler</p>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
         <Link

@@ -1,0 +1,124 @@
+import { createHmac, timingSafeEqual } from "crypto";
+import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+/**
+ * Meta Lead Ads webhook — reklam formundan gelen leadleri otomatik
+ * create_lead_from_webhook RPC'si üzerinden oluşturur (bkz. o RPC'nin
+ * migration dosyasındaki not: auth.uid() gerektiren normal create_lead
+ * yerine, service_role'e özel bu yol kullanılıyor çünkü webhook'un
+ * gerçek bir kullanıcı oturumu yok).
+ *
+ * META_WEBHOOK_VERIFY_TOKEN / META_WEBHOOK_APP_SECRET / META_PAGE_ACCESS_TOKEN
+ * tanımlı değilken bu route sadece hata döner — gerçek Meta kimlik
+ * bilgileri bağlanmadan hiçbir gerçek trafik almaz, zararsızdır.
+ */
+
+const META_GRAPH_VERSION = "v21.0";
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const mode = url.searchParams.get("hub.mode");
+  const token = url.searchParams.get("hub.verify_token");
+  const challenge = url.searchParams.get("hub.challenge");
+
+  if (mode === "subscribe" && token === process.env.META_WEBHOOK_VERIFY_TOKEN && challenge) {
+    return new NextResponse(challenge, { status: 200 });
+  }
+
+  return new NextResponse("Forbidden", { status: 403 });
+}
+
+type MetaLeadgenChange = {
+  field: string;
+  value?: { leadgen_id?: string };
+};
+
+type MetaWebhookPayload = {
+  entry?: { changes?: MetaLeadgenChange[] }[];
+};
+
+type MetaFieldDatum = { name: string; values: string[] };
+
+function verifySignature(rawBody: string, signatureHeader: string | null, appSecret: string): boolean {
+  if (!signatureHeader?.startsWith("sha256=")) return false;
+  const expected = createHmac("sha256", appSecret).update(rawBody).digest("hex");
+  const provided = signatureHeader.slice("sha256=".length);
+  if (expected.length !== provided.length) return false;
+  return timingSafeEqual(Buffer.from(expected), Buffer.from(provided));
+}
+
+function fieldValue(fields: MetaFieldDatum[], name: string): string | undefined {
+  return fields.find((f) => f.name === name)?.values?.[0];
+}
+
+async function fetchLeadFieldData(leadgenId: string, pageAccessToken: string): Promise<MetaFieldDatum[]> {
+  const res = await fetch(
+    `https://graph.facebook.com/${META_GRAPH_VERSION}/${leadgenId}?fields=field_data&access_token=${pageAccessToken}`
+  );
+  if (!res.ok) {
+    throw new Error(`Graph API hatası (${res.status}): ${await res.text()}`);
+  }
+  const data = await res.json();
+  return (data.field_data ?? []) as MetaFieldDatum[];
+}
+
+export async function POST(request: Request) {
+  const appSecret = process.env.META_WEBHOOK_APP_SECRET;
+  const pageAccessToken = process.env.META_PAGE_ACCESS_TOKEN;
+
+  if (!appSecret || !pageAccessToken) {
+    console.error("META_WEBHOOK_APP_SECRET veya META_PAGE_ACCESS_TOKEN tanımlı değil");
+    return new NextResponse("Not configured", { status: 500 });
+  }
+
+  const rawBody = await request.text();
+
+  if (!verifySignature(rawBody, request.headers.get("x-hub-signature-256"), appSecret)) {
+    return new NextResponse("Invalid signature", { status: 401 });
+  }
+
+  let payload: MetaWebhookPayload;
+  try {
+    payload = JSON.parse(rawBody);
+  } catch {
+    return new NextResponse("Invalid payload", { status: 400 });
+  }
+
+  const leadgenIds = (payload.entry ?? [])
+    .flatMap((entry) => entry.changes ?? [])
+    .filter((change) => change.field === "leadgen")
+    .map((change) => change.value?.leadgen_id)
+    .filter((id): id is string => Boolean(id));
+
+  const admin = createAdminClient();
+
+  for (const leadgenId of leadgenIds) {
+    try {
+      const fields = await fetchLeadFieldData(leadgenId, pageAccessToken);
+      const customerName = fieldValue(fields, "full_name") ?? "İsimsiz (Meta Lead Ads)";
+      const phone = fieldValue(fields, "phone_number") ?? "";
+      const city = fieldValue(fields, "city") ?? "";
+
+      const { error } = await admin.rpc("create_lead_from_webhook", {
+        p_customer_name: customerName,
+        p_phone: phone,
+        p_city: city,
+        p_source: "Meta Lead Ads",
+        p_external_ref: leadgenId,
+      });
+
+      if (error) {
+        console.error("create_lead_from_webhook başarısız, leadgen_id=", leadgenId, error);
+      }
+    } catch (err) {
+      console.error("Meta lead işlenemedi, leadgen_id=", leadgenId, err);
+    }
+  }
+
+  // Meta başarısız (non-2xx) yanıtları tekrar dener — kalıcı hatalarda
+  // (örn. o leadgen_id için Graph API kalıcı olarak başarısız oluyorsa)
+  // sonsuz retry istemiyoruz, bu yüzden hata durumunda bile 200 dönüyoruz;
+  // asıl hata sunucu loguna yazılıyor.
+  return new NextResponse("OK", { status: 200 });
+}

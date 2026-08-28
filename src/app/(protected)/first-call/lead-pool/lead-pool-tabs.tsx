@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { LeadsTable } from "@/components/leads-table";
 import type { LeadListItem } from "@/lib/data/leads";
+import { claimLead } from "./actions";
 
 const TABS = [
   { key: "havuz", label: "Havuzdaki Yeni Leadler" },
@@ -37,7 +38,11 @@ export function LeadPoolTabs({ leads }: { leads: LeadListItem[] }) {
       </div>
 
       {activeTab === "havuz" && (
-        <LeadsTable leads={poolLeads} emptyMessage="Havuzda henüz aranmamış yeni lead yok." />
+        <LeadsTable
+          leads={poolLeads}
+          emptyMessage="Havuzda henüz aranmamış yeni lead yok."
+          onClaim={claimLead}
+        />
       )}
       {activeTab === "takip" && (
         <LeadsTable leads={followUpLeads} emptyMessage="Şu an takip ettiğiniz bir lead yok." />

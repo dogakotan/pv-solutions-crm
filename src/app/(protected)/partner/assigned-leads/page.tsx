@@ -3,10 +3,10 @@ import { Users, Clock, AlertTriangle, ClipboardList, FileText, Handshake, Trophy
 import { createClient } from "@/lib/supabase/server";
 import { StatCard } from "@/components/stat-card";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
-import { LeadStageBadge, ReferralStatusBadge } from "@/components/lead-badges";
 import { getPartnerReferralKpis, getVisiblePartnerReferrals } from "@/lib/data/leads";
 import { SetHeaderContent } from "@/components/page-header-slot";
 import { acceptReferral, rejectReferral } from "./actions";
+import { ReferralsTable } from "./referrals-table";
 
 export default function PartnerAssignedLeadsPage() {
   return (
@@ -20,7 +20,7 @@ export default function PartnerAssignedLeadsPage() {
       </Suspense>
 
       <Suspense fallback={<TableSkeleton rows={8} />}>
-        <ReferralsTable />
+        <ReferralsTableSection />
       </Suspense>
     </div>
   );
@@ -45,84 +45,9 @@ async function ReferralKpiGrid() {
   );
 }
 
-async function ReferralsTable() {
+async function ReferralsTableSection() {
   const supabase = await createClient();
   const referrals = await getVisiblePartnerReferrals(supabase);
 
-  if (referrals.length === 0) {
-    return (
-      <div className="rounded-2xl border border-card-border bg-card p-12 text-center text-sm text-muted shadow-sm">
-        Henüz size yönlendirilmiş bir müşteri bulunmuyor.
-      </div>
-    );
-  }
-
-  return (
-    <div className="overflow-x-auto rounded-2xl border border-card-border bg-card shadow-sm">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-card-border bg-background text-xs font-medium uppercase tracking-wide text-muted">
-          <tr>
-            <th className="px-4 py-3">Lead No</th>
-            <th className="px-4 py-3">Müşteri</th>
-            <th className="px-4 py-3">Şehir</th>
-            <th className="px-4 py-3">Süreç Aşaması</th>
-            <th className="px-4 py-3">Yönlendirme Durumu</th>
-            <th className="px-4 py-3">Yanıt Süresi</th>
-            <th className="px-4 py-3">Yanıt</th>
-          </tr>
-        </thead>
-        <tbody>
-          {referrals.map((referral) => (
-            <tr key={referral.id} className="border-b border-card-border last:border-0">
-              <td className="px-4 py-3 font-medium text-foreground">{referral.leadNo}</td>
-              <td className="px-4 py-3 text-foreground">{referral.customerName}</td>
-              <td className="px-4 py-3 text-muted">{referral.city}</td>
-              <td className="px-4 py-3">
-                <LeadStageBadge stage={referral.stage} />
-              </td>
-              <td className="px-4 py-3">
-                <ReferralStatusBadge status={referral.status} />
-              </td>
-              <td className={referral.isOverdue ? "px-4 py-3 font-medium text-red-600" : "px-4 py-3 text-muted"}>
-                {new Date(referral.responseDueAt).toLocaleDateString("tr-TR")}
-                {referral.isOverdue && " (gecikti)"}
-              </td>
-              <td className="px-4 py-3">
-                {referral.status === "pending" ? (
-                  <div className="flex items-center gap-2">
-                    <form action={acceptReferral}>
-                      <input type="hidden" name="referralId" value={referral.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-card-border px-2 py-1 text-xs text-green-700 hover:bg-background"
-                      >
-                        Kabul Et
-                      </button>
-                    </form>
-                    <form action={rejectReferral} className="flex items-center gap-1">
-                      <input type="hidden" name="referralId" value={referral.id} />
-                      <input
-                        name="reason"
-                        required
-                        placeholder="Ret gerekçesi"
-                        className="w-32 rounded-lg border border-card-border px-2 py-1 text-xs"
-                      />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-card-border px-2 py-1 text-xs text-red-700 hover:bg-background"
-                      >
-                        Reddet
-                      </button>
-                    </form>
-                  </div>
-                ) : (
-                  <span className="text-xs text-muted">—</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  return <ReferralsTable referrals={referrals} acceptAction={acceptReferral} rejectAction={rejectReferral} />;
 }

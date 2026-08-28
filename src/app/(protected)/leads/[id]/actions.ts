@@ -212,7 +212,7 @@ export async function assignPartner(formData: FormData) {
     p_lead_id: leadId,
     p_partner_id: partnerId,
   });
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/sales/my-leads");
@@ -238,7 +238,7 @@ export async function advanceLeadStage(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.from("leads").update({ stage: nextStage }).eq("id", leadId);
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/sales/my-leads");
@@ -474,7 +474,7 @@ export async function deleteOfferVersion(formData: FormData) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("delete_offer_version", { p_offer_version_id: offerVersionId });
 
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   if (leadId) revalidatePath(`/leads/${leadId}`);
   if (offerId) revalidatePath(`/offers/${offerId}`);
@@ -501,7 +501,7 @@ export async function softDeleteLead(formData: FormData) {
     p_reason: reason || undefined,
   });
 
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   revalidatePath("/leads");
   redirect("/leads");

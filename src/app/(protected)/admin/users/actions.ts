@@ -21,7 +21,7 @@ export async function updateUserRole(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_user_role", { p_user_id: userId, p_role: role as DbRole });
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   revalidatePath("/admin/users");
 }
@@ -32,7 +32,7 @@ export async function updateUserActive(formData: FormData) {
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_user_active", { p_user_id: userId, p_is_active: isActive });
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   revalidatePath("/admin/users");
 }

@@ -16,7 +16,7 @@ export async function assignToSales(formData: FormData) {
     p_lead_id: leadId,
     p_sales_user_id: salesUserId,
   });
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   revalidatePath("/admin/assignments");
 }
@@ -55,7 +55,7 @@ export async function assignToPartner(formData: FormData) {
     p_lead_id: leadId,
     p_partner_id: partnerId,
   });
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   revalidatePath("/admin/assignments");
 }

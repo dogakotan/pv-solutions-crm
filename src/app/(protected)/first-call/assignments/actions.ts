@@ -16,7 +16,7 @@ export async function assignToSales(formData: FormData) {
     p_lead_id: leadId,
     p_sales_user_id: salesUserId,
   });
-  if (error) throw error;
+  if (error) throw new Error(error.message);
 
   revalidatePath("/first-call/assignments");
   revalidatePath("/first-call/lead-pool");

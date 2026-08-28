@@ -5,10 +5,13 @@ import { TableSkeleton } from "@/components/skeletons";
 import { SetHeaderContent } from "@/components/page-header-slot";
 import {
   getAuditLogs,
+  getAuditLogActors,
   AUDIT_ENTITY_TYPES,
   AUDIT_ENTITY_LABELS,
   AUDIT_ACTION_LABELS,
 } from "@/lib/data/audit-logs";
+
+const PAGE_SIZE = 50;
 
 function formatValues(values: unknown): string | null {
   if (values === null || values === undefined) return null;
@@ -16,13 +19,23 @@ function formatValues(values: unknown): string | null {
   return JSON.stringify(values);
 }
 
+type AuditLogSearchParams = {
+  entityType?: string;
+  actorId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  offset?: string;
+};
+
 export default async function AuditLogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ entityType?: string }>;
+  searchParams: Promise<AuditLogSearchParams>;
 }) {
   await requireRole(["admin"]);
-  const { entityType } = await searchParams;
+  const params = await searchParams;
+  const { entityType, actorId, dateFrom, dateTo } = params;
+  const hasFilters = Boolean(entityType || actorId || dateFrom || dateTo);
 
   return (
     <div className="flex flex-col gap-6">
@@ -31,8 +44,7 @@ export default async function AuditLogPage({
       </SetHeaderContent>
 
       <p className="text-sm text-muted">
-        Lead silme, rol değişikliği, partner yönlendirme kararı gibi hassas işlemlerin denetim
-        kaydı. Son 100 kayıt gösterilir.
+        Lead silme, rol değişikliği, partner yönlendirme kararı gibi hassas işlemlerin denetim kaydı.
       </p>
 
       <form method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-card-border bg-card p-4 shadow-sm">
@@ -52,13 +64,39 @@ export default async function AuditLogPage({
             ))}
           </select>
         </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="actor-id" className="text-xs font-medium text-muted">Kullanıcı</label>
+          <Suspense fallback={<div className="h-[38px] w-40 rounded-lg border border-card-border bg-background" />}>
+            <ActorFilterSelect actorId={actorId} />
+          </Suspense>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="date-from" className="text-xs font-medium text-muted">Başlangıç Tarihi</label>
+          <input
+            id="date-from"
+            type="date"
+            name="dateFrom"
+            defaultValue={dateFrom ?? ""}
+            className="rounded-lg border border-card-border px-3 py-2 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="date-to" className="text-xs font-medium text-muted">Bitiş Tarihi</label>
+          <input
+            id="date-to"
+            type="date"
+            name="dateTo"
+            defaultValue={dateTo ?? ""}
+            className="rounded-lg border border-card-border px-3 py-2 text-sm"
+          />
+        </div>
         <button
           type="submit"
           className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark"
         >
           Filtrele
         </button>
-        {entityType && (
+        {hasFilters && (
           <a href="/admin/audit-log" className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-background">
             Temizle
           </a>
@@ -66,15 +104,44 @@ export default async function AuditLogPage({
       </form>
 
       <Suspense fallback={<TableSkeleton rows={10} />}>
-        <AuditLogTable entityType={entityType} />
+        <AuditLogTable {...params} />
       </Suspense>
     </div>
   );
 }
 
-async function AuditLogTable({ entityType }: { entityType?: string }) {
+async function ActorFilterSelect({ actorId }: { actorId?: string }) {
   const supabase = await createClient();
-  const logs = await getAuditLogs(supabase, { entityType });
+  const actors = await getAuditLogActors(supabase);
+
+  return (
+    <select
+      id="actor-id"
+      name="actorId"
+      defaultValue={actorId ?? ""}
+      className="rounded-lg border border-card-border px-3 py-2 text-sm"
+    >
+      <option value="">Tümü</option>
+      {actors.map((actor) => (
+        <option key={actor.id} value={actor.id}>
+          {actor.fullName}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+async function AuditLogTable({ entityType, actorId, dateFrom, dateTo, offset }: AuditLogSearchParams) {
+  const supabase = await createClient();
+  const currentOffset = Number(offset ?? 0) || 0;
+  const { logs, hasMore } = await getAuditLogs(supabase, {
+    limit: PAGE_SIZE,
+    offset: currentOffset,
+    entityType,
+    actorId,
+    dateFrom,
+    dateTo,
+  });
 
   if (logs.length === 0) {
     return (
@@ -84,46 +151,83 @@ async function AuditLogTable({ entityType }: { entityType?: string }) {
     );
   }
 
+  function buildParams(nextOffset: number) {
+    const p = new URLSearchParams();
+    if (entityType) p.set("entityType", entityType);
+    if (actorId) p.set("actorId", actorId);
+    if (dateFrom) p.set("dateFrom", dateFrom);
+    if (dateTo) p.set("dateTo", dateTo);
+    if (nextOffset > 0) p.set("offset", String(nextOffset));
+    return p.toString();
+  }
+
+  const prevOffset = Math.max(0, currentOffset - PAGE_SIZE);
+  const nextParams = buildParams(currentOffset + PAGE_SIZE);
+  const prevParams = buildParams(prevOffset);
+
   return (
-    <div className="overflow-x-auto rounded-2xl border border-card-border bg-card shadow-sm">
-      <table className="w-full text-left text-sm">
-        <thead className="border-b border-card-border bg-background text-xs font-medium uppercase tracking-wide text-muted">
-          <tr>
-            <th className="px-4 py-3">Tarih</th>
-            <th className="px-4 py-3">Kullanıcı</th>
-            <th className="px-4 py-3">İşlem</th>
-            <th className="px-4 py-3">Varlık</th>
-            <th className="px-4 py-3">Değişiklik</th>
-            <th className="px-4 py-3">Gerekçe</th>
-          </tr>
-        </thead>
-        <tbody>
-          {logs.map((log) => {
-            const oldStr = formatValues(log.oldValues);
-            const newStr = formatValues(log.newValues);
-            return (
-              <tr key={log.id} className="border-b border-card-border align-top last:border-0">
-                <td className="whitespace-nowrap px-4 py-3 text-muted">
-                  {new Date(log.createdAt).toLocaleString("tr-TR")}
-                </td>
-                <td className="px-4 py-3 text-foreground">{log.actorName ?? "—"}</td>
-                <td className="px-4 py-3 text-foreground">
-                  {AUDIT_ACTION_LABELS[log.action] ?? log.action}
-                </td>
-                <td className="px-4 py-3 text-muted">
-                  {AUDIT_ENTITY_LABELS[log.entityType] ?? log.entityType}
-                </td>
-                <td className="max-w-xs px-4 py-3 text-xs text-muted">
-                  {oldStr && <p className="truncate" title={oldStr}>Önce: {oldStr}</p>}
-                  {newStr && <p className="truncate" title={newStr}>Sonra: {newStr}</p>}
-                  {!oldStr && !newStr && "—"}
-                </td>
-                <td className="max-w-xs px-4 py-3 text-muted">{log.reason ?? "—"}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+    <div className="flex flex-col gap-4">
+      <div className="overflow-x-auto rounded-2xl border border-card-border bg-card shadow-sm">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-card-border bg-background text-xs font-medium uppercase tracking-wide text-muted">
+            <tr>
+              <th className="px-4 py-3">Tarih</th>
+              <th className="px-4 py-3">Kullanıcı</th>
+              <th className="px-4 py-3">İşlem</th>
+              <th className="px-4 py-3">Varlık</th>
+              <th className="px-4 py-3">Değişiklik</th>
+              <th className="px-4 py-3">Gerekçe</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.map((log) => {
+              const oldStr = formatValues(log.oldValues);
+              const newStr = formatValues(log.newValues);
+              return (
+                <tr key={log.id} className="border-b border-card-border align-top last:border-0">
+                  <td className="whitespace-nowrap px-4 py-3 text-muted">
+                    {new Date(log.createdAt).toLocaleString("tr-TR")}
+                  </td>
+                  <td className="px-4 py-3 text-foreground">{log.actorName ?? "—"}</td>
+                  <td className="px-4 py-3 text-foreground">
+                    {AUDIT_ACTION_LABELS[log.action] ?? log.action}
+                  </td>
+                  <td className="px-4 py-3 text-muted">
+                    {AUDIT_ENTITY_LABELS[log.entityType] ?? log.entityType}
+                  </td>
+                  <td className="max-w-xs px-4 py-3 text-xs text-muted">
+                    {oldStr && <p className="truncate" title={oldStr}>Önce: {oldStr}</p>}
+                    {newStr && <p className="truncate" title={newStr}>Sonra: {newStr}</p>}
+                    {!oldStr && !newStr && "—"}
+                  </td>
+                  <td className="max-w-xs px-4 py-3 text-muted">{log.reason ?? "—"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {(currentOffset > 0 || hasMore) && (
+        <div className="flex items-center justify-center gap-3">
+          {currentOffset > 0 && (
+            <a
+              href={`/admin/audit-log?${prevParams}`}
+              className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-background"
+            >
+              ← Önceki Sayfa
+            </a>
+          )}
+          {hasMore && (
+            <a
+              href={`/admin/audit-log?${nextParams}`}
+              className="rounded-lg border border-card-border px-4 py-2 text-sm hover:bg-background"
+            >
+              Sonraki Sayfa →
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }

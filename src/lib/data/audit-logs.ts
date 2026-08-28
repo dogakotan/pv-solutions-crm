@@ -24,38 +24,80 @@ function extractActorName(embed: ActorEmbed): string | null {
   return row?.full_name ?? null;
 }
 
-/** RLS zaten audit_logs_select politikasıyla yalnızca pv_admin'e açık — burada ayrıca rol kontrolü gerekmez. */
+/**
+ * RLS zaten audit_logs_select politikasıyla yalnızca pv_admin'e açık —
+ * burada ayrıca rol kontrolü gerekmez. hasMore'u ayrı bir count sorgusu
+ * yapmadan anlamak için limit+1 satır çekilip fazlası kesiliyor.
+ */
 export async function getAuditLogs(
   supabase: TypedSupabaseClient,
-  options: { limit?: number; entityType?: string } = {}
-): Promise<AuditLogItem[]> {
-  const { limit = 100, entityType } = options;
+  options: {
+    limit?: number;
+    offset?: number;
+    entityType?: string;
+    actorId?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  } = {}
+): Promise<{ logs: AuditLogItem[]; hasMore: boolean }> {
+  const { limit = 50, offset = 0, entityType, actorId, dateFrom, dateTo } = options;
 
   let query = supabase
     .from("audit_logs")
     .select("id, action, entity_type, entity_id, old_values, new_values, reason, created_at, profiles(full_name)")
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
-    .limit(limit);
+    .range(offset, offset + limit);
 
-  if (entityType) {
-    query = query.eq("entity_type", entityType);
-  }
+  if (entityType) query = query.eq("entity_type", entityType);
+  if (actorId) query = query.eq("actor_user_id", actorId);
+  if (dateFrom) query = query.gte("created_at", `${dateFrom}T00:00:00`);
+  if (dateTo) query = query.lte("created_at", `${dateTo}T23:59:59`);
 
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    actorName: extractActorName(row.profiles as ActorEmbed),
-    action: row.action,
-    entityType: row.entity_type,
-    entityId: row.entity_id,
-    oldValues: row.old_values,
-    newValues: row.new_values,
-    reason: row.reason,
-    createdAt: row.created_at,
-  }));
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+
+  return {
+    logs: page.map((row) => ({
+      id: row.id,
+      actorName: extractActorName(row.profiles as ActorEmbed),
+      action: row.action,
+      entityType: row.entity_type,
+      entityId: row.entity_id,
+      oldValues: row.old_values,
+      newValues: row.new_values,
+      reason: row.reason,
+      createdAt: row.created_at,
+    })),
+    hasMore,
+  };
+}
+
+export type AuditLogActor = { id: string; fullName: string };
+
+export async function getAuditLogActors(supabase: TypedSupabaseClient): Promise<AuditLogActor[]> {
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("actor_user_id, profiles(full_name)")
+    .not("actor_user_id", "is", null);
+
+  if (error) throw error;
+
+  const seen = new Map<string, string>();
+  for (const row of data ?? []) {
+    const name = extractActorName(row.profiles as ActorEmbed);
+    if (row.actor_user_id && name && !seen.has(row.actor_user_id)) {
+      seen.set(row.actor_user_id, name);
+    }
+  }
+
+  return [...seen.entries()]
+    .map(([id, fullName]) => ({ id, fullName }))
+    .sort((a, b) => a.fullName.localeCompare(b.fullName, "tr"));
 }
 
 export const AUDIT_ENTITY_TYPES = [

@@ -16,6 +16,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # LayoutProps<"/"> gibi rota bazlı tipler next dev/build tarafından
+      # .next/types altında üretilir — bu fork'ta (bkz. AGENTS.md) tsc
+      # bunlar üretilmeden çalışırsa "Cannot find name 'LayoutProps'" ile
+      # başarısız olur. `next typegen` tam build yapmadan sadece bu tipleri
+      # üretir.
+      - run: npx next typegen
       - run: npx tsc --noEmit
 
   # NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY hem build hem

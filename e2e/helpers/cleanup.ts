@@ -78,3 +78,68 @@ export async function findUserIdByEmail(email: string): Promise<string | null> {
   if (error) throw error;
   return data?.id ?? null;
 }
+
+/**
+ * record_sales_outcome / soft_delete_lead gibi belirli bir sahiplik/atama
+ * durumu gerektiren senaryolar için doğrudan (create_lead RPC'sini atlayarak)
+ * bir test lead'i oluşturur. protect_lead_privileged_columns trigger'ı sadece
+ * UPDATE'te devreye girer (OLD/NEW karşılaştırır), düz bir INSERT'i etkilemez
+ * — bypass GUC'una gerek yok.
+ */
+export async function createTestLead(fields: {
+  customerName: string;
+  ownerId: string;
+  salesUserId?: string | null;
+  firstCallUserId?: string | null;
+  stage?: string;
+}): Promise<string> {
+  const { data, error } = await adminClient()
+    .from("leads")
+    .insert({
+      customer_type: "individual",
+      customer_name: fields.customerName,
+      phone: `05${Date.now().toString().slice(-9)}`,
+      city: "İstanbul",
+      source: "e2e-test",
+      owner_id: fields.ownerId,
+      created_by: fields.ownerId,
+      first_call_user_id: fields.firstCallUserId ?? fields.ownerId,
+      sales_user_id: fields.salesUserId ?? null,
+      stage: fields.stage ?? "new",
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+export async function createTestReferral(fields: {
+  leadId: string;
+  partnerId: string;
+  referredBy: string;
+}): Promise<string> {
+  const { data, error } = await adminClient()
+    .from("partner_referrals")
+    .insert({
+      lead_id: fields.leadId,
+      partner_id: fields.partnerId,
+      referred_by: fields.referredBy,
+      status: "pending",
+      sent_at: new Date().toISOString(),
+      response_due_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+export async function findPartnerIdByEmail(email: string): Promise<string | null> {
+  const { data, error } = await adminClient()
+    .from("profiles")
+    .select("partner_id")
+    .eq("email", email)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.partner_id ?? null;
+}

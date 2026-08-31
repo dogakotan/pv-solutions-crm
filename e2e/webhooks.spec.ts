@@ -1,4 +1,3 @@
-import { createHmac } from "crypto";
 import { test, expect } from "@playwright/test";
 import { findLeadIdByExternalRef, deleteLead, hasCleanupCredentials } from "./helpers/cleanup";
 

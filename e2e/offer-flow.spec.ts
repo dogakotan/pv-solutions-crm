@@ -1,15 +1,23 @@
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 import { createLeadViaUi } from "./helpers/actions";
-import { deleteLead, findLeadIdByCustomerName, hasCleanupCredentials } from "./helpers/cleanup";
+import {
+  createTestReferral,
+  deleteLead,
+  findLeadIdByCustomerName,
+  findUserIdByEmail,
+  findPartnerIdByEmail,
+  hasCleanupCredentials,
+} from "./helpers/cleanup";
 
 const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
+const PARTNER_ADMIN_TEST_EMAIL = process.env.PARTNER_ADMIN_TEST_EMAIL;
 
 test.describe("teklif gönderme ve revize etme (create_offer / revise_offer RPC)", () => {
   test.skip(
-    !TEST_EMAIL || !TEST_PASSWORD || !hasCleanupCredentials(),
-    "E2E_TEST_EMAIL / E2E_TEST_PASSWORD / SUPABASE_SERVICE_ROLE_KEY tanımlı değil — .env.local'e bakınız",
+    !TEST_EMAIL || !TEST_PASSWORD || !PARTNER_ADMIN_TEST_EMAIL || !hasCleanupCredentials(),
+    "E2E_TEST_EMAIL / E2E_TEST_PASSWORD / PARTNER_ADMIN_TEST_EMAIL / SUPABASE_SERVICE_ROLE_KEY tanımlı değil — .env.local'e bakınız",
   );
 
   test("teklif gönderilir, revize edilince eski revizyon 'Eski Revizyon' olur", async ({ page }) => {
@@ -18,10 +26,20 @@ test.describe("teklif gönderme ve revize etme (create_offer / revise_offer RPC)
     try {
       await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);
 
-      // Teklifin bağlanacağı atılabilir lead
+      // Teklifin bağlanacağı atılabilir lead — create_offer artık aktif bir
+      // partner referral'ı zorunlu tuttuğu için (require_referral_for_offers
+      // migration'ı) lead'i doğrudan bir partnere referral ediyoruz.
       await createLeadViaUi(page, customerName);
       const leadId = await findLeadIdByCustomerName(customerName);
       expect(leadId).toBeTruthy();
+
+      const [adminId, partnerId] = await Promise.all([
+        findUserIdByEmail(TEST_EMAIL!),
+        findPartnerIdByEmail(PARTNER_ADMIN_TEST_EMAIL!),
+      ]);
+      expect(adminId).not.toBeNull();
+      expect(partnerId).not.toBeNull();
+      await createTestReferral({ leadId: leadId!, partnerId: partnerId!, referredBy: adminId! });
 
       await page.goto(`/leads/${leadId}`);
 

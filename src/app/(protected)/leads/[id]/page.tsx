@@ -336,7 +336,10 @@ async function TeklifGecmisiCard({
   canManageOffers: boolean;
 }) {
   const supabase = await createClient();
-  const offerHistory = await getOfferHistoryForLead(supabase, leadId);
+  const [offerHistory, activeReferral] = await Promise.all([
+    getOfferHistoryForLead(supabase, leadId),
+    getActiveReferralForLead(supabase, leadId),
+  ]);
 
   return (
     <div className={CARD_CLASS}>
@@ -370,7 +373,13 @@ async function TeklifGecmisiCard({
           )}
         </div>
       ) : canManageOffers ? (
-        <OfferForm leadId={leadId} offerId={null} latestVersion={null} />
+        activeReferral ? (
+          <OfferForm leadId={leadId} offerId={null} latestVersion={null} />
+        ) : (
+          <p className="text-sm text-muted">
+            Teklif oluşturmak için önce lead&apos;i bir partnere atayın.
+          </p>
+        )
       ) : (
         <p className="text-sm text-muted">Bu lead için henüz teklif gönderilmemiş.</p>
       )}

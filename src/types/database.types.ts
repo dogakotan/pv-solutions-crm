@@ -560,7 +560,7 @@ export type Database = {
           id: string
           lead_id: string
           offer_no: string
-          referral_id: string | null
+          referral_id: string
           status: string
           updated_at: string
         }
@@ -571,7 +571,7 @@ export type Database = {
           id?: string
           lead_id: string
           offer_no: string
-          referral_id?: string | null
+          referral_id: string
           status?: string
           updated_at?: string
         }
@@ -582,7 +582,7 @@ export type Database = {
           id?: string
           lead_id?: string
           offer_no?: string
-          referral_id?: string | null
+          referral_id?: string
           status?: string
           updated_at?: string
         }

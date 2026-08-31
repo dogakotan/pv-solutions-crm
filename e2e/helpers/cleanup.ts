@@ -42,6 +42,16 @@ export async function findLeadIdByCustomerName(customerName: string): Promise<st
   return data?.id ?? null;
 }
 
+export async function findLeadIdByExternalRef(externalRef: string): Promise<string | null> {
+  const { data, error } = await adminClient()
+    .from("leads")
+    .select("id")
+    .eq("external_ref", externalRef)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 // Partner silme; partner_service_regions/partner_capabilities/
 // partner_internal_notes cascade ile birlikte silinir. NOT: partneri
 // silmeden önce ona partner_id ile bağlı bir profiles satırı kalmamalı

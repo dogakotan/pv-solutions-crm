@@ -13,7 +13,10 @@ export async function createLeadViaUi(page: Page, customerName: string): Promise
   await page.fill('input[name="customerName"]', customerName);
   await page.fill('input[name="phone"]', `05${Date.now().toString().slice(-9)}`);
   await page.fill('input[name="city"]', "İstanbul");
-  await page.fill('input[name="source"]', "E2E test");
+  // Kaynak alanı artık sabit bir listeden seçiliyor (name="source" olan
+  // input hidden ve bu seçime göre türetiliyor) — görünür <select>'in kendi
+  // name/label'ı yok, bu yüzden kendine özgü bir option value'suyla bulunuyor.
+  await page.locator("select").filter({ has: page.locator('option[value="inbound_call"]') }).selectOption("inbound_call");
   await page.getByRole("button", { name: "Lead Oluştur" }).click();
   await page.waitForURL(/\/first-call\/lead-pool/, { timeout: 15_000 });
 }

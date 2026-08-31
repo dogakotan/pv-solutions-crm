@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -1153,6 +1153,41 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "leads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_activity: {
+        Args: {
+          p_activity_type: string
+          p_description?: string
+          p_lead_id: string
+          p_next_follow_up_at?: string
+          p_occurred_at?: string
+          p_referral_id?: string
+          p_title: string
+          p_visibility?: string
+        }
+        Returns: {
+          activity_type: string
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          lead_id: string
+          next_action: string | null
+          next_follow_up_at: string | null
+          occurred_at: string | null
+          referral_id: string | null
+          scheduled_at: string | null
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "activities"
           isOneToOne: true
           isSetofReturn: false
         }

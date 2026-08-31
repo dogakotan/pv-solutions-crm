@@ -77,31 +77,19 @@ export async function createActivity(
   const nextFollowUpAt = nextFollowUpAtRaw ? new Date(nextFollowUpAtRaw).toISOString() : null;
   const isShared = shareWithPartner && referralId.length > 0;
 
-  const { error } = await supabase.from("activities").insert({
-    lead_id: leadId,
-    activity_type: activityType,
-    visibility: isShared ? "shared_with_partner" : "pv_internal",
-    referral_id: isShared ? referralId : null,
-    title,
-    description: description || null,
-    occurred_at: now,
-    next_follow_up_at: nextFollowUpAt,
-    created_by: userId,
+  const { error } = await supabase.rpc("create_activity", {
+    p_lead_id: leadId,
+    p_activity_type: activityType,
+    p_title: title,
+    p_description: description || undefined,
+    p_occurred_at: now,
+    p_next_follow_up_at: nextFollowUpAt ?? undefined,
+    p_visibility: isShared ? "shared_with_partner" : "pv_internal",
+    p_referral_id: isShared ? referralId : undefined,
   });
 
   if (error) {
     return { error: "Aktivite kaydedilemedi: " + error.message };
-  }
-
-  if (nextFollowUpAt) {
-    const { error: leadUpdateError } = await supabase
-      .from("leads")
-      .update({ next_follow_up_at: nextFollowUpAt })
-      .eq("id", leadId);
-
-    if (leadUpdateError) {
-      return { error: "Aktivite kaydedildi ama lead'in takip tarihi güncellenemedi: " + leadUpdateError.message };
-    }
   }
 
   revalidatePath(`/leads/${leadId}`);

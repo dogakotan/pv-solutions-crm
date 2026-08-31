@@ -10,20 +10,26 @@ import type { getSalesLeadKpis } from "@/lib/data/leads";
 
 const TABS = [
   { key: "pool", label: "Lead Havuzu" },
-  { key: "mine", label: "Leadlerim" },
+  { key: "mine", label: "Takipteki Leadler" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
 
 /**
- * Admin için Lead Havuzu / Leadlerim artık ayrı sayfalar (ayrı
+ * Admin için Lead Havuzu / Takipteki Leadler artık ayrı sayfalar (ayrı
  * navigasyon = ayrı auth+veri round trip'i) değil, tek sayfada
  * client-side sekme. Tüm veri sayfa yüklendiğinde bir kez, paralel
  * çekiliyor; sekme geçişi sıfır ağ isteği.
  *
+ * "Takipteki Leadler" sistemdeki TÜM yeni-olmayan leadleri gösterir,
+ * admin'in kendi sahiplendiği leadleri değil — bu sayfa admin-only
+ * bir genel bakış olduğundan sekme kasıtlı olarak "leadlerim" değil
+ * (bkz. requireRole(["admin"]) sayfa üstünde). Kişisel/sahiplik
+ * bazlı görünüm için bkz. sales/my-leads (pv_sales rolü).
+ *
  * "Bana Yönlendirilenler" sekmesi kaldırıldı — partnere yönlendirilen
- * leadler zaten Lead Havuzu/Leadlerim tablolarında (aşama = "referred"
- * ve sonrası) görünür, ayrı bir sekmeye gerek yok.
+ * leadler zaten Lead Havuzu/Takipteki Leadler tablolarında (aşama =
+ * "referred" ve sonrası) görünür, ayrı bir sekmeye gerek yok.
  */
 export function LeadsOverviewTabs({
   salesKpis,

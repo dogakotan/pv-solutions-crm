@@ -1035,6 +1035,51 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      advance_lead_stage: {
+        Args: { p_lead_id: string; p_next_stage: string }
+        Returns: {
+          address: string | null
+          alternate_phone: string | null
+          battery_interest: string | null
+          building_type: string | null
+          city: string
+          competitor_offer_note: string | null
+          competitor_offer_status: string | null
+          created_at: string
+          created_by: string
+          customer_name: string
+          customer_type: string
+          deleted_at: string | null
+          deleted_by: string | null
+          district: string | null
+          email: string | null
+          estimated_capacity_kwp: number | null
+          ev_interest: string | null
+          external_ref: string | null
+          first_call_user_id: string | null
+          general_notes: string | null
+          heat_pump_interest: string | null
+          id: string
+          lead_no: string | null
+          lead_score: string | null
+          next_follow_up_at: string | null
+          owner_id: string
+          phone: string
+          pool_interest: string | null
+          priority: string
+          roof_area_m2: number | null
+          sales_user_id: string | null
+          source: string
+          stage: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "leads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assign_lead_to_partner: {
         Args: {
           p_employee_id?: string

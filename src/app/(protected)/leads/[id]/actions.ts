@@ -207,13 +207,12 @@ export async function assignPartner(formData: FormData) {
 }
 
 /**
- * leads_update_pv RLS'i (pv_admin her lead'i, pv_sales yalnızca kendi
- * sahiplendiği lead'i) ve `stage` kolonunun protected_columns listesinde
- * olmaması sayesinde düz bir UPDATE yeterli — bkz.
- * lead_protected_columns_and_assignment_rpc migration'ı. DB aşama
- * sırasını doğrulamadığı için (yalnızca enum whitelist'i var) hedef
- * aşama burada NEXT_STAGE tablosundaki tek olası değerle sınırlanıyor,
- * formdan gelen keyfi bir stage değeri kabul edilmiyor.
+ * DB aşama sırasını doğrulamadığı için (yalnızca enum whitelist'i var)
+ * hedef aşama burada NEXT_STAGE tablosundaki tek olası değerle
+ * sınırlanıyor, formdan gelen keyfi bir stage değeri kabul edilmiyor.
+ * advance_lead_stage RPC'si (leads_update_pv RLS'ine güvenen SECURITY
+ * INVOKER) update + write_audit_log'u tek çağrıda sarmalıyor — bkz.
+ * add_missing_lead_audit_logs migration'ı.
  */
 export async function advanceLeadStage(formData: FormData) {
   const leadId = String(formData.get("leadId") ?? "");
@@ -225,7 +224,7 @@ export async function advanceLeadStage(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("leads").update({ stage: nextStage }).eq("id", leadId);
+  const { error } = await supabase.rpc("advance_lead_stage", { p_lead_id: leadId, p_next_stage: nextStage });
   if (error) throw new Error(error.message);
 
   revalidatePath(`/leads/${leadId}`);

@@ -13,6 +13,7 @@ import {
 import { LeadStageBadge } from "@/components/lead-badges";
 import { CardGridSkeleton, CardSkeleton } from "@/components/skeletons";
 import { SetHeaderContent } from "@/components/page-header-slot";
+import { ExportCsvButton } from "@/components/export-csv-button";
 
 const inputClass = "rounded-lg border border-card-border px-3 py-2 text-sm";
 
@@ -82,7 +83,14 @@ async function FunnelCard({ range }: { range: ReportRange }) {
     <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-sm font-medium text-foreground">Aşama Hunisi</h2>
-        <span className="text-xs text-muted">Geciken takip: {overdueCount}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-muted">Geciken takip: {overdueCount}</span>
+          <ExportCsvButton
+            filename="asama-hunisi.csv"
+            headers={["Aşama", "Adet"]}
+            rows={funnel.map((f) => [f.stage, f.count])}
+          />
+        </div>
       </div>
       <div className="flex flex-col gap-2">
         {funnel.map((f) => (
@@ -116,7 +124,16 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-medium text-foreground">Lead Kaynağına Göre Dönüşüm</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-foreground">Lead Kaynağına Göre Dönüşüm</h2>
+          {sourceConversion.length > 0 && (
+            <ExportCsvButton
+              filename="lead-kaynagina-gore-donusum.csv"
+              headers={["Kaynak", "Toplam", "Kazanılan", "Kaybedilen", "Dönüşüm (%)"]}
+              rows={sourceConversion.map((s) => [s.source, s.total, s.won, s.lost, s.conversionRate])}
+            />
+          )}
+        </div>
         {sourceConversion.length === 0 ? (
           <p className="text-sm text-muted">Veri yok.</p>
         ) : (
@@ -148,7 +165,25 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
       </div>
 
       <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-medium text-foreground">Satışçı Performansı</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-foreground">Satışçı Performansı</h2>
+          {salespersonPerformance.length > 0 && (
+            <ExportCsvButton
+              filename="satisci-performansi.csv"
+              headers={["Satışçı", "Yeni", "Açık", "Teklif", "Kazanılan", "Kaybedilen", "Dönüşüm (%)", "Kazanılan Tutar"]}
+              rows={salespersonPerformance.map((o) => [
+                o.salesUserName,
+                o.newCount,
+                o.openCount,
+                o.offersSent,
+                o.won,
+                o.lost,
+                o.conversionRate,
+                o.wonAmounts.map((w) => `${w.amount.toLocaleString("tr-TR")} ${w.currency}`).join(", "),
+              ])}
+            />
+          )}
+        </div>
         {salespersonPerformance.length === 0 ? (
           <p className="text-sm text-muted">Veri yok.</p>
         ) : (
@@ -192,7 +227,24 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
       </div>
 
       <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-medium text-foreground">Partner Bazlı Performans</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-foreground">Partner Bazlı Performans</h2>
+          {partnerPerformance.length > 0 && (
+            <ExportCsvButton
+              filename="partner-bazli-performans.csv"
+              headers={["Partner", "Manuel Puan", "Yönlendirme", "Kabul Oranı (%)", "Ort. Cevap (sa)", "Teklif", "Satış"]}
+              rows={partnerPerformance.map((p) => [
+                p.partnerName,
+                p.rating != null ? p.rating.toFixed(1) : "",
+                p.referralCount,
+                p.acceptanceRate,
+                p.avgResponseHours ?? "",
+                p.offerCount,
+                p.salesCount,
+              ])}
+            />
+          )}
+        </div>
         {partnerPerformance.length === 0 ? (
           <p className="text-sm text-muted">Veri yok.</p>
         ) : (
@@ -230,7 +282,16 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
       </div>
 
       <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-medium text-foreground">Kayıp Nedenleri Dağılımı</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-medium text-foreground">Kayıp Nedenleri Dağılımı</h2>
+          {lostReasons.length > 0 && (
+            <ExportCsvButton
+              filename="kayip-nedenleri.csv"
+              headers={["Neden", "Adet"]}
+              rows={lostReasons.map((r) => [r.reason, r.count])}
+            />
+          )}
+        </div>
         {lostReasons.length === 0 ? (
           <p className="text-sm text-muted">Kayıp kaydı yok.</p>
         ) : (
@@ -254,7 +315,16 @@ async function MonthlyWonCard({ range }: { range: ReportRange }) {
 
   return (
     <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
-      <h2 className="mb-4 text-sm font-medium text-foreground">Aylık Kazanılan Satış Tutarı</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-sm font-medium text-foreground">Aylık Kazanılan Satış Tutarı</h2>
+        {monthlyWon.length > 0 && (
+          <ExportCsvButton
+            filename="aylik-kazanilan-satis-tutari.csv"
+            headers={["Ay", "Para Birimi", "Toplam Tutar"]}
+            rows={monthlyWon.map((m) => [m.month, m.currency, m.totalAmount])}
+          />
+        )}
+      </div>
       {monthlyWon.length === 0 ? (
         <p className="text-sm text-muted">Henüz kazanılan bir satış yok.</p>
       ) : (

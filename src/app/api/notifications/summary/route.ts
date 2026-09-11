@@ -12,10 +12,10 @@ import { getMyNotifications, getUnreadNotificationCount } from "@/lib/data/notif
  */
 export async function GET() {
   const supabase = await createClient();
-  const [{ appRole }, unreadCount, notifications] = await Promise.all([
+  const [{ appRole }, unreadCount, { notifications }] = await Promise.all([
     getCurrentUserRole(),
     getUnreadNotificationCount(supabase),
-    getMyNotifications(supabase, 8),
+    getMyNotifications(supabase, { limit: 8 }),
   ]);
 
   return NextResponse.json(

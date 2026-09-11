@@ -6,6 +6,7 @@ type TypedSupabaseClient = SupabaseClient<Database>;
 
 export type NotificationItem = {
   id: string;
+  type: string;
   title: string;
   message: string | null;
   entityType: string | null;
@@ -18,6 +19,7 @@ export type NotificationItem = {
 
 function mapNotification(row: {
   id: string;
+  type: string;
   title: string;
   message: string | null;
   entity_type: string | null;
@@ -28,6 +30,7 @@ function mapNotification(row: {
 }): NotificationItem {
   return {
     id: row.id,
+    type: row.type,
     title: row.title,
     message: row.message,
     entityType: row.entity_type,
@@ -48,16 +51,25 @@ function mapNotification(row: {
  */
 export async function getMyNotifications(
   supabase: TypedSupabaseClient,
-  limit = 50
-): Promise<NotificationItem[]> {
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("id, title, message, entity_type, entity_id, priority, read_at, created_at")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  options: { limit?: number; offset?: number; type?: string; unreadOnly?: boolean } = {}
+): Promise<{ notifications: NotificationItem[]; hasMore: boolean }> {
+  const { limit = 50, offset = 0, type, unreadOnly } = options;
 
+  let query = supabase
+    .from("notifications")
+    .select("id, type, title, message, entity_type, entity_id, priority, read_at, created_at")
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit);
+
+  if (type) query = query.eq("type", type);
+  if (unreadOnly) query = query.is("read_at", null);
+
+  const { data, error } = await query;
   if (error) throw error;
-  const notifications = (data ?? []).map(mapNotification);
+
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const notifications = (hasMore ? rows.slice(0, limit) : rows).map(mapNotification);
 
   const referralIds = notifications
     .filter((n) => n.entityType === "referral" && n.entityId)
@@ -79,8 +91,34 @@ export async function getMyNotifications(
     }
   }
 
-  return notifications;
+  return { notifications, hasMore };
 }
+
+export const NOTIFICATION_TYPES = [
+  "lead_assigned",
+  "referral_received",
+  "referral_overdue",
+  "referral_accepted",
+  "referral_rejected",
+  "offer_created",
+  "offer_revised",
+  "offer_expired",
+  "sale_won",
+  "sale_lost",
+] as const;
+
+export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  lead_assigned: "Lead Atandı",
+  referral_received: "Yeni Yönlendirme",
+  referral_overdue: "Yönlendirme Yanıtı Gecikti",
+  referral_accepted: "Yönlendirme Kabul Edildi",
+  referral_rejected: "Yönlendirme Reddedildi",
+  offer_created: "Yeni Teklif",
+  offer_revised: "Teklif Revize Edildi",
+  offer_expired: "Teklifin Süresi Doldu",
+  sale_won: "Satış Kazanıldı",
+  sale_lost: "Satış Kaybedildi",
+};
 
 export async function getUnreadNotificationCount(supabase: TypedSupabaseClient): Promise<number> {
   const { count, error } = await supabase

@@ -3,6 +3,8 @@ import { loginAs } from "./helpers/auth";
 import {
   findLeadIdByExternalRef,
   findLeadIdByCustomerName,
+  findUserIdByEmail,
+  createTestLead,
   deleteLead,
   hasCleanupCredentials,
 } from "./helpers/cleanup";
@@ -114,6 +116,46 @@ test.describe("Satışa toplu atama (assignManyToSales)", () => {
         if (id) createdLeadIds.push(id);
       }
       await Promise.all(createdLeadIds.map((id) => deleteLead(id)));
+    }
+  });
+});
+
+test.describe("Partnere tekli atama (assign_lead_to_partner RPC)", () => {
+  const email = process.env.E2E_TEST_EMAIL;
+  const password = process.env.E2E_TEST_PASSWORD;
+
+  test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
+  test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");
+
+  test("admin, kuyruktaki bir lead'i partnere atayabilir", async ({ page }) => {
+    const salesUserId = await findUserIdByEmail(process.env.SALES_TEST_EMAIL!);
+    expect(salesUserId).not.toBeNull();
+
+    const customerName = `E2E Partner Assign ${Date.now()}`;
+    const leadId = await createTestLead({
+      customerName,
+      ownerId: salesUserId!,
+      salesUserId: salesUserId!,
+      stage: "referred",
+    });
+
+    try {
+      await loginAs(page, email!, password!);
+      await page.goto("/admin/assignments");
+
+      const section = page.locator("section", { hasText: "Partnere Atama Bekleyen Leadler" });
+      const row = section.locator("tbody tr").filter({ hasText: customerName });
+      await expect(row).toBeVisible();
+
+      await row.locator("select").selectOption({ label: "Test Partner A" });
+      await row.getByRole("button", { name: "Ata" }).click();
+
+      // Atama başarılı olunca kuyruktan (artık aktif bir referral'ı olduğu için) düşer.
+      await expect(section.locator("tbody tr").filter({ hasText: customerName })).toHaveCount(0, {
+        timeout: 10_000,
+      });
+    } finally {
+      await deleteLead(leadId);
     }
   });
 });

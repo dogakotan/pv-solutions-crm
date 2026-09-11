@@ -140,11 +140,13 @@ export type PartnerPerformanceItem = {
 
 export async function getPartnerPerformance(
   supabase: TypedSupabaseClient,
-  range: ReportDateRange
+  range: ReportDateRange,
+  partnerId?: string
 ): Promise<PartnerPerformanceItem[]> {
   const { data, error } = await supabase.rpc("get_partner_performance", {
     p_from: range.from ?? undefined,
     p_to: range.to ?? undefined,
+    p_partner_id: partnerId,
   });
   if (error) throw error;
 

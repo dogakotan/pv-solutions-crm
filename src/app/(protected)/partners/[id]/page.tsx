@@ -84,9 +84,9 @@ async function PartnerDetailTabsSection({
     canManagePartners ? getPartnerInternalNote(supabase, partnerId) : Promise.resolve(null),
     getOpenReferralsForPartner(supabase, partnerId),
     getOffersForPartner(supabase, partnerId),
-    getPartnerPerformance(supabase, { from: null, to: null }),
+    getPartnerPerformance(supabase, { from: null, to: null }, partnerId),
   ]);
-  const performance = performanceList.find((p) => p.partnerId === partnerId) ?? null;
+  const performance = performanceList[0] ?? null;
 
   return (
     <PartnerDetailTabs

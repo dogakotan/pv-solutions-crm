@@ -1552,7 +1552,7 @@ export type Database = {
         }[]
       }
       get_partner_performance: {
-        Args: { p_from?: string; p_to?: string }
+        Args: { p_from?: string; p_partner_id?: string; p_to?: string }
         Returns: {
           acceptance_rate: number
           avg_response_hours: number

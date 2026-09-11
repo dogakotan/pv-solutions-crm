@@ -225,7 +225,7 @@ export function PartnerDetailTabs({
               <PerformanceStat label="Teklif" value={String(performance.offerCount)} />
               <PerformanceStat label="Satış" value={String(performance.salesCount)} />
               <PerformanceStat
-                label="Puan"
+                label="Manuel Puan"
                 value={performance.rating != null ? performance.rating.toFixed(1) : "—"}
               />
             </div>

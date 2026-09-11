@@ -201,7 +201,7 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
               <thead className="border-b border-card-border text-muted">
                 <tr>
                   <th className="py-2 font-medium">Partner</th>
-                  <th className="py-2 font-medium">Puan</th>
+                  <th className="py-2 font-medium">Manuel Puan</th>
                   <th className="py-2 font-medium">Yönlendirme</th>
                   <th className="py-2 font-medium">Kabul Oranı</th>
                   <th className="py-2 font-medium">Ort. Cevap</th>

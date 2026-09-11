@@ -75,3 +75,26 @@ export async function createPartnerEmployee(
   revalidatePath(`/partners/${partnerId}`);
   return { tempPassword, createdEmail: email };
 }
+
+/**
+ * set_user_active RPC'si zaten herhangi bir profile için çalışıyor
+ * (yalnızca çağıranın pv_admin olmasını kontrol ediyor) — partner
+ * çalışanı/yöneticisi için ayrı bir RPC gerekmiyordu, eksik olan
+ * yalnızca bu UI kontrolüydü.
+ */
+export async function setPartnerEmployeeActive(partnerId: string, formData: FormData) {
+  await requireRole(["admin"]);
+
+  const userId = String(formData.get("userId") ?? "");
+  const isActive = formData.get("isActive") === "true";
+
+  if (!userId) {
+    throw new Error("Geçersiz istek.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_user_active", { p_user_id: userId, p_is_active: isActive });
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/partners/${partnerId}`);
+}

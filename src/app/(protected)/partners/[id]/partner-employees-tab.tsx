@@ -1,5 +1,6 @@
 import type { PartnerEmployee } from "@/types/partner";
 import { AddEmployeeForm } from "./add-employee-form";
+import { setPartnerEmployeeActive } from "./employees-actions";
 
 const ROLE_LABELS = {
   partner_admin: "Partner Yönetici",
@@ -13,6 +14,8 @@ export function PartnerEmployeesTab({
   partnerId: string;
   employees: PartnerEmployee[];
 }) {
+  const toggleActive = setPartnerEmployeeActive.bind(null, partnerId);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -32,6 +35,7 @@ export function PartnerEmployeesTab({
                 <th className="py-2 font-medium">Rol</th>
                 <th className="py-2 font-medium">Telefon</th>
                 <th className="py-2 font-medium">Durum</th>
+                <th className="py-2 font-medium"></th>
               </tr>
             </thead>
             <tbody>
@@ -50,6 +54,18 @@ export function PartnerEmployeesTab({
                     >
                       {employee.isActive ? "Aktif" : "Pasif"}
                     </span>
+                  </td>
+                  <td className="py-2 text-right">
+                    <form action={toggleActive}>
+                      <input type="hidden" name="userId" value={employee.id} />
+                      <input type="hidden" name="isActive" value={(!employee.isActive).toString()} />
+                      <button
+                        type="submit"
+                        className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background"
+                      >
+                        {employee.isActive ? "Pasifleştir" : "Aktifleştir"}
+                      </button>
+                    </form>
                   </td>
                 </tr>
               ))}

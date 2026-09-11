@@ -428,18 +428,37 @@ export type SiteVisitItem = {
   leadNo: string;
   customerName: string;
   city: string;
+  district: string | null;
+  address: string | null;
+  phone: string;
   scheduledAt: string | null;
 };
 
 type SiteVisitLeadEmbed =
-  | { lead_no: string; customer_name: string; city: string; next_follow_up_at: string | null }
-  | { lead_no: string; customer_name: string; city: string; next_follow_up_at: string | null }[]
+  | {
+      lead_no: string;
+      customer_name: string;
+      city: string;
+      district: string | null;
+      address: string | null;
+      phone: string;
+      next_follow_up_at: string | null;
+    }
+  | {
+      lead_no: string;
+      customer_name: string;
+      city: string;
+      district: string | null;
+      address: string | null;
+      phone: string;
+      next_follow_up_at: string | null;
+    }[]
   | null;
 
 export async function getPartnerSiteVisits(supabase: TypedSupabaseClient): Promise<SiteVisitItem[]> {
   const { data, error } = await supabase
     .from("partner_referrals")
-    .select("id, leads!inner(lead_no, customer_name, city, next_follow_up_at)")
+    .select("id, leads!inner(lead_no, customer_name, city, district, address, phone, next_follow_up_at)")
     .eq("leads.stage", "survey_scheduled")
     .order("next_follow_up_at", { foreignTable: "leads", ascending: true, nullsFirst: false })
     .limit(100);
@@ -454,6 +473,9 @@ export async function getPartnerSiteVisits(supabase: TypedSupabaseClient): Promi
       leadNo: lead.lead_no,
       customerName: lead.customer_name,
       city: lead.city,
+      district: lead.district,
+      address: lead.address,
+      phone: lead.phone,
       scheduledAt: lead.next_follow_up_at,
     }];
   });

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getPartnerSiteVisits } from "@/lib/data/leads";
+import { getPartnerSiteVisits, type SiteVisitItem } from "@/lib/data/leads";
 import { SetHeaderContent } from "@/components/page-header-slot";
 
 function formatDateKey(iso: string | null): string {
@@ -10,6 +10,15 @@ function formatDateKey(iso: string | null): string {
     month: "long",
     year: "numeric",
   });
+}
+
+function formatAddress(visit: SiteVisitItem): string {
+  return [visit.district, visit.address].filter(Boolean).join(", ") || "Adres girilmemiş";
+}
+
+function mapsHref(visit: SiteVisitItem): string {
+  const query = [visit.address, visit.district, visit.city].filter(Boolean).join(", ");
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 export default async function PartnerSiteVisitsPage() {
@@ -45,7 +54,8 @@ export default async function PartnerSiteVisitsPage() {
                     <tr>
                       <th className="px-4 py-3">Lead No</th>
                       <th className="px-4 py-3">Müşteri</th>
-                      <th className="px-4 py-3">Şehir</th>
+                      <th className="px-4 py-3">Telefon</th>
+                      <th className="px-4 py-3">Adres</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -53,7 +63,24 @@ export default async function PartnerSiteVisitsPage() {
                       <tr key={visit.referralId} className="border-b border-card-border last:border-0">
                         <td className="px-4 py-3 font-medium text-foreground">{visit.leadNo}</td>
                         <td className="px-4 py-3 text-foreground">{visit.customerName}</td>
-                        <td className="px-4 py-3 text-muted">{visit.city}</td>
+                        <td className="px-4 py-3">
+                          <a href={`tel:${visit.phone}`} className="text-brand hover:underline">
+                            {visit.phone}
+                          </a>
+                        </td>
+                        <td className="px-4 py-3 text-muted">
+                          <div className="flex flex-col gap-0.5">
+                            <span>{formatAddress(visit)}</span>
+                            <a
+                              href={mapsHref(visit)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-brand hover:underline"
+                            >
+                              Haritada Aç
+                            </a>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

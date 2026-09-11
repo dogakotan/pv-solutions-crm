@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { SidebarProvider, SidebarFrame, MobileMenuButton } from "@/components/sidebar-shell";
 import { HeaderPageSlot } from "@/components/page-header-slot";
+import { GlobalSearch } from "@/components/global-search";
 import { NotificationBellPopover } from "@/components/notification-bell-popover";
 import { getCurrentUserRole } from "@/lib/auth/require-role";
 import { logout } from "./actions";
@@ -53,6 +54,7 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
               <HeaderPageSlot />
             </div>
             <div className="flex items-center gap-4">
+              <GlobalSearch />
               <NotificationBellPopover />
               <Suspense fallback={<HeaderUserSkeleton />}>
                 <HeaderUser />

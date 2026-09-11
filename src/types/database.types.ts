@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -1642,6 +1642,16 @@ export type Database = {
           source: string
           total: number
           won: number
+        }[]
+      }
+      global_search: {
+        Args: { p_query: string }
+        Returns: {
+          entity_id: string
+          entity_type: string
+          primary_label: string
+          secondary_label: string
+          tertiary_label: string
         }[]
       }
       health_check: { Args: never; Returns: boolean }

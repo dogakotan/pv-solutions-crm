@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { Bell, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserRole } from "@/lib/auth/require-role";
 import { getMyNotifications } from "@/lib/data/notifications";
+import { getNotificationHref } from "@/lib/notification-links";
 import { EmptyState } from "@/components/empty-state";
 import { SetHeaderContent } from "@/components/page-header-slot";
 import { markNotificationRead, markAllNotificationsRead } from "./actions";
 import { MarkReadButton } from "./mark-read-button";
 
 export default async function NotificationsPage() {
+  const { appRole } = await getCurrentUserRole();
   const supabase = await createClient();
   const notifications = await getMyNotifications(supabase);
   const unreadCount = notifications.filter((n) => !n.readAt).length;
@@ -38,6 +41,7 @@ export default async function NotificationsPage() {
       ) : (
         <div className="flex flex-col gap-2">
           {notifications.map((n) => {
+            const href = getNotificationHref(n, appRole);
             const body = (
               <div className="flex-1">
                 <p className="text-sm font-medium text-foreground">{n.title}</p>
@@ -60,8 +64,8 @@ export default async function NotificationsPage() {
                 {n.priority === "high" && (
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" aria-hidden="true" />
                 )}
-                {n.entityType === "lead" && n.entityId ? (
-                  <Link href={`/leads/${n.entityId}`} className="flex-1 hover:underline">
+                {href ? (
+                  <Link href={href} className="flex-1 hover:underline">
                     {body}
                   </Link>
                 ) : (

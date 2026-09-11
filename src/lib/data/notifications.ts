@@ -13,6 +13,7 @@ export type NotificationItem = {
   priority: "normal" | "high";
   readAt: string | null;
   createdAt: string;
+  referralLeadId: string | null;
 };
 
 function mapNotification(row: {
@@ -34,9 +35,17 @@ function mapNotification(row: {
     priority: row.priority as "normal" | "high",
     readAt: row.read_at,
     createdAt: row.created_at,
+    referralLeadId: null,
   };
 }
 
+/**
+ * entity_type='referral' bildirimlerinde entity_id partner_referrals.id'yi
+ * tutuyor, leads.id'yi değil — notifications.entity_id polimorfik bir kolon
+ * olduğu için PostgREST bunu otomatik embed edemiyor. pv tarafı (admin/sales)
+ * için "hangi lead'e gidileceğini" bulmak amacıyla tek bir toplu sorguyla
+ * referral_id -> lead_id eşlemesi çekiliyor.
+ */
 export async function getMyNotifications(
   supabase: TypedSupabaseClient,
   limit = 50
@@ -48,7 +57,29 @@ export async function getMyNotifications(
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []).map(mapNotification);
+  const notifications = (data ?? []).map(mapNotification);
+
+  const referralIds = notifications
+    .filter((n) => n.entityType === "referral" && n.entityId)
+    .map((n) => n.entityId as string);
+
+  if (referralIds.length > 0) {
+    const { data: referrals, error: referralError } = await supabase
+      .from("partner_referrals")
+      .select("id, lead_id")
+      .in("id", referralIds);
+
+    if (referralError) throw referralError;
+
+    const leadIdByReferralId = new Map((referrals ?? []).map((r) => [r.id, r.lead_id]));
+    for (const n of notifications) {
+      if (n.entityType === "referral" && n.entityId) {
+        n.referralLeadId = leadIdByReferralId.get(n.entityId) ?? null;
+      }
+    }
+  }
+
+  return notifications;
 }
 
 export async function getUnreadNotificationCount(supabase: TypedSupabaseClient): Promise<number> {

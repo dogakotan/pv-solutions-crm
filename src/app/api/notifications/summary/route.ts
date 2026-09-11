@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserRole } from "@/lib/auth/require-role";
 import { getMyNotifications, getUnreadNotificationCount } from "@/lib/data/notifications";
 
 /**
@@ -11,13 +12,14 @@ import { getMyNotifications, getUnreadNotificationCount } from "@/lib/data/notif
  */
 export async function GET() {
   const supabase = await createClient();
-  const [unreadCount, notifications] = await Promise.all([
+  const [{ appRole }, unreadCount, notifications] = await Promise.all([
+    getCurrentUserRole(),
     getUnreadNotificationCount(supabase),
     getMyNotifications(supabase, 8),
   ]);
 
   return NextResponse.json(
-    { unreadCount, notifications },
+    { unreadCount, notifications, appRole },
     { headers: { "Cache-Control": "no-store" } }
   );
 }

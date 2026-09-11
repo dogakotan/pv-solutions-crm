@@ -4,9 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, AlertTriangle } from "lucide-react";
 import type { NotificationItem } from "@/lib/data/notifications";
+import type { AppRole } from "@/lib/auth/roles";
+import { getNotificationHref } from "@/lib/notification-links";
 import { markNotificationRead, markAllNotificationsRead } from "@/app/(protected)/notifications/actions";
 
-type Summary = { unreadCount: number; notifications: NotificationItem[] };
+type Summary = { unreadCount: number; notifications: NotificationItem[]; appRole: AppRole | null };
 
 /**
  * Server component'ten prop ile beslenmiyor — bu sayfanın bulunduğu paylaşılan
@@ -17,7 +19,7 @@ type Summary = { unreadCount: number; notifications: NotificationItem[] };
  */
 export function NotificationBellPopover() {
   const [open, setOpen] = useState(false);
-  const [summary, setSummary] = useState<Summary>({ unreadCount: 0, notifications: [] });
+  const [summary, setSummary] = useState<Summary>({ unreadCount: 0, notifications: [], appRole: null });
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [markAllPending, setMarkAllPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +89,7 @@ export function NotificationBellPopover() {
     }
   }
 
-  const { unreadCount, notifications } = summary;
+  const { unreadCount, notifications, appRole } = summary;
 
   return (
     <div ref={containerRef} className="relative">
@@ -129,6 +131,7 @@ export function NotificationBellPopover() {
               <p className="px-4 py-6 text-center text-sm text-muted">Henüz bildirim yok</p>
             ) : (
               notifications.map((n) => {
+                const href = appRole ? getNotificationHref(n, appRole) : null;
                 const body = (
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">{n.title}</p>
@@ -148,12 +151,8 @@ export function NotificationBellPopover() {
                     {n.priority === "high" && (
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-600" aria-hidden="true" />
                     )}
-                    {n.entityType === "lead" && n.entityId ? (
-                      <Link
-                        href={`/leads/${n.entityId}`}
-                        onClick={() => setOpen(false)}
-                        className="min-w-0 flex-1 hover:underline"
-                      >
+                    {href ? (
+                      <Link href={href} onClick={() => setOpen(false)} className="min-w-0 flex-1 hover:underline">
                         {body}
                       </Link>
                     ) : (

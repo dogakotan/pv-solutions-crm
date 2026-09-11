@@ -553,3 +553,24 @@ export async function recordSalesOutcome(
   revalidatePath("/leads");
   return {};
 }
+
+/**
+ * 'lost' bir lead'i sabit bir yeniden-giriş noktasına ('contacted')
+ * döndürür — yalnızca pv_admin veya lead sahibi pv_sales çağırabilir
+ * (kontrol reactivate_lead RPC'sinin içinde).
+ */
+export async function reactivateLead(formData: FormData) {
+  const leadId = String(formData.get("leadId") ?? "");
+
+  if (!leadId) {
+    throw new Error("Geçersiz istek.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("reactivate_lead", { p_lead_id: leadId });
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/sales/my-leads");
+  revalidatePath("/leads");
+}

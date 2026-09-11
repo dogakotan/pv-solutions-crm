@@ -20,12 +20,12 @@ import { getRecommendedPartnersForLead } from "@/lib/data/partners";
 import { LeadStageBadge, LeadScoreBadge, ReferralStatusBadge, STAGE_STYLES } from "@/components/lead-badges";
 import { ActivityTypeBadge, ActivityVisibilityBadge } from "@/components/activity-badges";
 import { OfferVersionRow } from "@/components/offer-version-row";
-import { NEXT_STAGE } from "@/types/lead";
+import { NEXT_STAGE, type LeadStage } from "@/types/lead";
 import { ActivityForm } from "./activity-form";
 import { SalesOutcomeForm } from "./sales-outcome-form";
 import { OfferForm } from "./offer-form";
 import { QualificationForm } from "./qualification-form";
-import { assignPartner, advanceLeadStage, deleteOfferVersion, softDeleteLead } from "./actions";
+import { assignPartner, advanceLeadStage, deleteOfferVersion, softDeleteLead, reactivateLead } from "./actions";
 import { DeleteLeadButton } from "./delete-lead-button";
 import { INTEREST_OPTIONS } from "@/components/lead-qualification-fields";
 
@@ -240,7 +240,7 @@ export default async function LeadDetailPage({
         </Suspense>
 
         <Suspense fallback={<CardSkeleton lines={4} />}>
-          <SatisSonucuCard leadId={lead.id} appRole={appRole} />
+          <SatisSonucuCard leadId={lead.id} appRole={appRole} leadStage={lead.stage} />
         </Suspense>
       </div>
 
@@ -436,59 +436,87 @@ async function AktivitelerCard({ leadId }: { leadId: string }) {
   );
 }
 
-async function SatisSonucuCard({ leadId, appRole }: { leadId: string; appRole: AppRole }) {
+async function SatisSonucuCard({
+  leadId,
+  appRole,
+  leadStage,
+}: {
+  leadId: string;
+  appRole: AppRole;
+  leadStage: LeadStage;
+}) {
   const supabase = await createClient();
   const [salesOutcome, offerVersions] = await Promise.all([
     getSalesOutcomeForLead(supabase, leadId),
     getOfferVersionsForLead(supabase, leadId),
   ]);
 
+  // Yeniden açılan (reactivate_lead) bir lead'in stage'i 'contacted'a
+  // döner ama sales_outcomes satırı (geçmiş kayıt olarak) silinmez —
+  // özet yalnızca stage hâlâ o sonuçla eşleşiyorsa gösterilir, aksi
+  // halde form tekrar açılır (yeni bir sonuç kaydedilebilsin diye).
+  const showOutcomeSummary = salesOutcome && salesOutcome.outcome === leadStage;
+
   return (
     <div className={CARD_CLASS}>
       <h2 className="mb-4 text-sm font-medium text-foreground">Satış Sonucu</h2>
 
-      {salesOutcome ? (
-        <dl className="flex flex-col gap-3 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted">Sonuç</dt>
-            <dd className={salesOutcome.outcome === "won" ? "font-medium text-green-700" : "font-medium text-red-700"}>
-              {salesOutcome.outcome === "won" ? "Kazanıldı" : "Kaybedildi"}
-            </dd>
-          </div>
-          {salesOutcome.outcome === "won" ? (
-            <>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Kabul Edilen Teklif</dt>
-                <dd className="text-foreground">
-                  {salesOutcome.offerNo} — Rev.{salesOutcome.revisionNo}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-4">
-                <dt className="text-muted">Nihai Tutar</dt>
-                <dd className="text-foreground">
-                  {salesOutcome.finalAmount?.toLocaleString("tr-TR")} {salesOutcome.currency}
-                </dd>
-              </div>
-            </>
-          ) : (
+      {showOutcomeSummary && salesOutcome ? (
+        <div className="flex flex-col gap-4">
+          <dl className="flex flex-col gap-3 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-muted">Gerekçe</dt>
-              <dd className="text-foreground">{salesOutcome.lostReason}</dd>
+              <dt className="text-muted">Sonuç</dt>
+              <dd className={salesOutcome.outcome === "won" ? "font-medium text-green-700" : "font-medium text-red-700"}>
+                {salesOutcome.outcome === "won" ? "Kazanıldı" : "Kaybedildi"}
+              </dd>
             </div>
-          )}
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted">Tarih</dt>
-            <dd className="text-foreground">
-              {new Date(salesOutcome.resultDate).toLocaleDateString("tr-TR")}
-            </dd>
-          </div>
-          {salesOutcome.notes && (
-            <div className="flex flex-col gap-1">
-              <dt className="text-muted">Not</dt>
-              <dd className="text-foreground">{salesOutcome.notes}</dd>
+            {salesOutcome.outcome === "won" ? (
+              <>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted">Kabul Edilen Teklif</dt>
+                  <dd className="text-foreground">
+                    {salesOutcome.offerNo} — Rev.{salesOutcome.revisionNo}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted">Nihai Tutar</dt>
+                  <dd className="text-foreground">
+                    {salesOutcome.finalAmount?.toLocaleString("tr-TR")} {salesOutcome.currency}
+                  </dd>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted">Gerekçe</dt>
+                <dd className="text-foreground">{salesOutcome.lostReason}</dd>
+              </div>
+            )}
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Tarih</dt>
+              <dd className="text-foreground">
+                {new Date(salesOutcome.resultDate).toLocaleDateString("tr-TR")}
+              </dd>
             </div>
+            {salesOutcome.notes && (
+              <div className="flex flex-col gap-1">
+                <dt className="text-muted">Not</dt>
+                <dd className="text-foreground">{salesOutcome.notes}</dd>
+              </div>
+            )}
+          </dl>
+
+          {salesOutcome.outcome === "lost" && appRole !== "first_call" && (
+            <form action={reactivateLead}>
+              <input type="hidden" name="leadId" value={leadId} />
+              <button
+                type="submit"
+                className="w-fit rounded-lg border border-card-border px-3 py-1.5 text-xs hover:bg-background"
+              >
+                Yeniden Aç
+              </button>
+            </form>
           )}
-        </dl>
+        </div>
       ) : appRole === "first_call" ? (
         <p className="text-sm text-muted">Bu lead için henüz bir satış sonucu kaydedilmemiş.</p>
       ) : (

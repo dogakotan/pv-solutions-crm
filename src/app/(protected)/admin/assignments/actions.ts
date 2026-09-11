@@ -59,3 +59,24 @@ export async function assignToPartner(formData: FormData) {
 
   revalidatePath("/admin/assignments");
 }
+
+export async function assignManyToPartner(leadIds: string[], partnerId: string) {
+  if (!partnerId) {
+    throw new Error("Partner seçilmedi");
+  }
+  if (leadIds.length === 0) return;
+
+  const supabase = await createClient();
+  const results = await Promise.all(
+    leadIds.map((leadId) =>
+      supabase.rpc("assign_lead_to_partner", { p_lead_id: leadId, p_partner_id: partnerId })
+    )
+  );
+
+  revalidatePath("/admin/assignments");
+
+  const failed = results.filter((r) => r.error);
+  if (failed.length > 0) {
+    throw new Error(`${failed.length} lead atanamadı: ${failed[0].error?.message}`);
+  }
+}

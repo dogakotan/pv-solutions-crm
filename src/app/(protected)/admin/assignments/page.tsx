@@ -9,7 +9,7 @@ import {
 import { LeadAssignmentQueue } from "@/components/lead-assignment-queue";
 import { TableSkeleton } from "@/components/skeletons";
 import { SetHeaderContent } from "@/components/page-header-slot";
-import { assignToSales, assignManyToSales, assignToPartner } from "./actions";
+import { assignToSales, assignManyToSales, assignToPartner, assignManyToPartner } from "./actions";
 
 export default function AdminAssignmentsPage() {
   return (
@@ -71,6 +71,7 @@ async function PartnerAssignmentQueueSection() {
       leads={partnerQueue}
       assignees={partners.map((partner) => ({ id: partner.id, label: partner.name }))}
       assignAction={assignToPartner}
+      bulkAssignAction={assignManyToPartner}
       selectName="partnerId"
       selectPlaceholder="Partner seç"
       title="Partnere Atama Bekleyen Leadler"

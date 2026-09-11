@@ -8,6 +8,7 @@ import {
   getAuditLogActors,
   AUDIT_ENTITY_TYPES,
   AUDIT_ENTITY_LABELS,
+  AUDIT_ACTIONS,
   AUDIT_ACTION_LABELS,
 } from "@/lib/data/audit-logs";
 
@@ -21,9 +22,11 @@ function formatValues(values: unknown): string | null {
 
 type AuditLogSearchParams = {
   entityType?: string;
+  action?: string;
   actorId?: string;
   dateFrom?: string;
   dateTo?: string;
+  q?: string;
   offset?: string;
 };
 
@@ -34,8 +37,8 @@ export default async function AuditLogPage({
 }) {
   await requireRole(["admin"]);
   const params = await searchParams;
-  const { entityType, actorId, dateFrom, dateTo } = params;
-  const hasFilters = Boolean(entityType || actorId || dateFrom || dateTo);
+  const { entityType, action, actorId, dateFrom, dateTo, q } = params;
+  const hasFilters = Boolean(entityType || action || actorId || dateFrom || dateTo || q);
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,6 +68,22 @@ export default async function AuditLogPage({
           </select>
         </div>
         <div className="flex flex-col gap-1">
+          <label htmlFor="action" className="text-xs font-medium text-muted">İşlem</label>
+          <select
+            id="action"
+            name="action"
+            defaultValue={action ?? ""}
+            className="rounded-lg border border-card-border px-3 py-2 text-sm"
+          >
+            <option value="">Tümü</option>
+            {AUDIT_ACTIONS.map((a) => (
+              <option key={a} value={a}>
+                {AUDIT_ACTION_LABELS[a] ?? a}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
           <label htmlFor="actor-id" className="text-xs font-medium text-muted">Kullanıcı</label>
           <Suspense fallback={<div className="h-[38px] w-40 rounded-lg border border-card-border bg-background" />}>
             <ActorFilterSelect actorId={actorId} />
@@ -87,6 +106,17 @@ export default async function AuditLogPage({
             type="date"
             name="dateTo"
             defaultValue={dateTo ?? ""}
+            className="rounded-lg border border-card-border px-3 py-2 text-sm"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="q" className="text-xs font-medium text-muted">Gerekçede Ara</label>
+          <input
+            id="q"
+            type="text"
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Gerekçe metni..."
             className="rounded-lg border border-card-border px-3 py-2 text-sm"
           />
         </div>
@@ -131,16 +161,18 @@ async function ActorFilterSelect({ actorId }: { actorId?: string }) {
   );
 }
 
-async function AuditLogTable({ entityType, actorId, dateFrom, dateTo, offset }: AuditLogSearchParams) {
+async function AuditLogTable({ entityType, action, actorId, dateFrom, dateTo, q, offset }: AuditLogSearchParams) {
   const supabase = await createClient();
   const currentOffset = Number(offset ?? 0) || 0;
   const { logs, hasMore } = await getAuditLogs(supabase, {
     limit: PAGE_SIZE,
     offset: currentOffset,
     entityType,
+    action,
     actorId,
     dateFrom,
     dateTo,
+    q,
   });
 
   if (logs.length === 0) {
@@ -154,9 +186,11 @@ async function AuditLogTable({ entityType, actorId, dateFrom, dateTo, offset }: 
   function buildParams(nextOffset: number) {
     const p = new URLSearchParams();
     if (entityType) p.set("entityType", entityType);
+    if (action) p.set("action", action);
     if (actorId) p.set("actorId", actorId);
     if (dateFrom) p.set("dateFrom", dateFrom);
     if (dateTo) p.set("dateTo", dateTo);
+    if (q) p.set("q", q);
     if (nextOffset > 0) p.set("offset", String(nextOffset));
     return p.toString();
   }

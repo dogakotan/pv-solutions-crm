@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSalesLeadKpis, getVisibleLeads } from "@/lib/data/leads";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { SetHeaderContent } from "@/components/page-header-slot";
+import { TruncationNotice } from "@/components/truncation-notice";
 import { LeadsOverviewTabs } from "./leads-overview-tabs";
 
 /**
@@ -45,10 +46,15 @@ export default async function LeadsPage() {
 
 async function LeadsOverviewContent() {
   const supabase = await createClient();
-  const [salesKpis, leads] = await Promise.all([
+  const [salesKpis, { leads, totalCount }] = await Promise.all([
     getSalesLeadKpis(supabase),
     getVisibleLeads(supabase, 200),
   ]);
 
-  return <LeadsOverviewTabs salesKpis={salesKpis} leads={leads} />;
+  return (
+    <>
+      <TruncationNotice totalCount={totalCount} shown={leads.length} />
+      <LeadsOverviewTabs salesKpis={salesKpis} leads={leads} />
+    </>
+  );
 }

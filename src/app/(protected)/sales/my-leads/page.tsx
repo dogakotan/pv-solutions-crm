@@ -4,6 +4,7 @@ import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { getSalesLeadKpis, getVisibleLeads } from "@/lib/data/leads";
 import { getActivitiesDueInRange } from "@/lib/data/activities";
 import { SetHeaderContent } from "@/components/page-header-slot";
+import { TruncationNotice } from "@/components/truncation-notice";
 import { MyLeadsTabs } from "./my-leads-tabs";
 
 export default function SalesMyLeadsPage() {
@@ -38,11 +39,16 @@ function todayRange() {
 async function MyLeadsContent() {
   const supabase = await createClient();
   const { start, end } = todayRange();
-  const [kpis, leads, todayActivities] = await Promise.all([
+  const [kpis, { leads, totalCount }, todayActivities] = await Promise.all([
     getSalesLeadKpis(supabase),
     getVisibleLeads(supabase, 200),
     getActivitiesDueInRange(supabase, start, end),
   ]);
 
-  return <MyLeadsTabs kpis={kpis} leads={leads} todayActivities={todayActivities} />;
+  return (
+    <>
+      <TruncationNotice totalCount={totalCount} shown={leads.length} />
+      <MyLeadsTabs kpis={kpis} leads={leads} todayActivities={todayActivities} />
+    </>
+  );
 }

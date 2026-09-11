@@ -6,6 +6,7 @@ import { FirstCallKpiGrid } from "@/components/first-call-kpi-grid";
 import { KpiGridSkeleton, TableSkeleton } from "@/components/skeletons";
 import { getVisibleLeads } from "@/lib/data/leads";
 import { SetHeaderContent } from "@/components/page-header-slot";
+import { TruncationNotice } from "@/components/truncation-notice";
 import { LeadPoolTabs } from "./lead-pool-tabs";
 
 export default function FirstCallLeadPoolPage() {
@@ -51,7 +52,12 @@ export default function FirstCallLeadPoolPage() {
 
 async function LeadPoolSection() {
   const supabase = await createClient();
-  const leads = await getVisibleLeads(supabase, 200);
+  const { leads, totalCount } = await getVisibleLeads(supabase, 200);
 
-  return <LeadPoolTabs leads={leads} />;
+  return (
+    <>
+      <TruncationNotice totalCount={totalCount} shown={leads.length} />
+      <LeadPoolTabs leads={leads} />
+    </>
+  );
 }

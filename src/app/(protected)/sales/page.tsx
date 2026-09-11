@@ -41,7 +41,7 @@ function todayRange() {
 async function SalesKpiGrid() {
   const supabase = await createClient();
   const { start, end } = todayRange();
-  const [kpis, leads, todayActivities] = await Promise.all([
+  const [kpis, { leads }, todayActivities] = await Promise.all([
     getSalesLeadKpis(supabase),
     getVisibleLeads(supabase, 200),
     getActivitiesDueInRange(supabase, start, end),

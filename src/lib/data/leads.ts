@@ -44,16 +44,18 @@ function mapLead(
   };
 }
 
-export async function getVisibleLeads(supabase: TypedSupabaseClient, limit = 50): Promise<LeadListItem[]> {
-  const { data, error } = await supabase
+export type VisibleLeadsResult = { leads: LeadListItem[]; totalCount: number };
+
+export async function getVisibleLeads(supabase: TypedSupabaseClient, limit = 50): Promise<VisibleLeadsResult> {
+  const { data, error, count } = await supabase
     .from("leads")
-    .select("id, lead_no, customer_name, city, stage, lead_score, next_follow_up_at, first_call_user_id")
+    .select("id, lead_no, customer_name, city, stage, lead_score, next_follow_up_at, first_call_user_id", { count: "exact" })
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) throw error;
-  return (data ?? []).map(mapLead);
+  return { leads: (data ?? []).map(mapLead), totalCount: count ?? 0 };
 }
 
 export type LeadDetail = {

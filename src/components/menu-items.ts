@@ -12,6 +12,7 @@ import {
   MapPin,
   ScrollText,
   UserPlus,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import type { AppRole } from "@/lib/auth/roles";
@@ -40,6 +41,7 @@ export const menuItems: MenuItem[] = [
   { label: "Partnerler", href: "/partners", icon: Handshake, roles: ["admin", "sales"] },
   { label: "Kullanıcılar", href: "/admin/users", icon: Users, roles: ["admin"] },
   { label: "İşlem Kayıtları", href: "/admin/audit-log", icon: ScrollText, roles: ["admin"] },
+  { label: "Sistem Durumu", href: "/admin/system", icon: Activity, roles: ["admin"] },
   { label: "Teklifler", href: "/offers", icon: FileText, roles: ALL_ROLES },
   { label: "Takvim", href: "/activities", icon: Calendar, roles: ALL_ROLES },
   { label: "Bildirimler", href: "/notifications", icon: Bell, roles: ALL_ROLES },

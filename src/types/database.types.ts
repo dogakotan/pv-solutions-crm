@@ -1458,6 +1458,18 @@ export type Database = {
           won: number
         }[]
       }
+      get_cron_job_status: {
+        Args: never
+        Returns: {
+          active: boolean
+          job_name: string
+          last_duration_seconds: number
+          last_return_message: string
+          last_run_at: string
+          last_status: string
+          schedule: string
+        }[]
+      }
       get_first_call_lead_kpis: {
         Args: { p_end: string; p_start: string }
         Returns: {

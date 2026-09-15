@@ -128,4 +128,16 @@ test.describe("RPC'ye taşınan admin sayfaları", () => {
     await expect(page.getByRole("heading", { name: "Teklifler", level: 1 })).toBeVisible();
     await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
   });
+
+  test("/admin/system cron job durumlarını listeler (get_cron_job_status RPC)", async ({ page }) => {
+    await loginAs(page, email!, password!);
+    await page.goto("/admin/system");
+
+    await expect(page.getByRole("heading", { name: "Sistem Durumu", level: 1 })).toBeVisible();
+    await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
+    // 4 pg_cron job'u da her zaman kayıtlı (bkz. ilgili *_cron.sql migration'ları) —
+    // en az biri başarılı çalışmış olmalı (hepsi her 30 dakikada bir çalışıyor).
+    await expect(page.getByText("Gecikmiş Partner Yanıtı Bildirimi")).toBeVisible();
+    await expect(page.getByText("Başarılı").first()).toBeVisible();
+  });
 });

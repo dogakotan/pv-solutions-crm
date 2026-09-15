@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createLogger, correlationIdFromRequest } from "@/lib/logger";
 
 /**
  * Meta Lead Ads webhook — reklam formundan gelen leadleri otomatik
@@ -83,25 +84,28 @@ export async function POST(request: Request) {
     return new NextResponse("Too many requests", { status: 429 });
   }
 
+  const logger = createLogger(correlationIdFromRequest(request));
   const appSecret = process.env.META_WEBHOOK_APP_SECRET;
   const pageAccessToken = process.env.META_PAGE_ACCESS_TOKEN;
 
   if (!appSecret || !pageAccessToken) {
-    console.error("META_WEBHOOK_APP_SECRET veya META_PAGE_ACCESS_TOKEN tanımlı değil");
-    return new NextResponse("Not configured", { status: 500 });
+    logger.error("META_WEBHOOK_APP_SECRET veya META_PAGE_ACCESS_TOKEN tanımlı değil");
+    return new NextResponse("Not configured", { status: 500, headers: { "x-correlation-id": logger.correlationId } });
   }
 
   const rawBody = await request.text();
 
   if (!verifySignature(rawBody, request.headers.get("x-hub-signature-256"), appSecret)) {
-    return new NextResponse("Invalid signature", { status: 401 });
+    logger.warn("Geçersiz imza");
+    return new NextResponse("Invalid signature", { status: 401, headers: { "x-correlation-id": logger.correlationId } });
   }
 
   let payload: MetaWebhookPayload;
   try {
     payload = JSON.parse(rawBody);
   } catch {
-    return new NextResponse("Invalid payload", { status: 400 });
+    logger.warn("Geçersiz JSON payload");
+    return new NextResponse("Invalid payload", { status: 400, headers: { "x-correlation-id": logger.correlationId } });
   }
 
   const leadgenIds = (payload.entry ?? [])
@@ -110,6 +114,7 @@ export async function POST(request: Request) {
     .map((change) => change.value?.leadgen_id)
     .filter((id): id is string => Boolean(id));
 
+  logger.info("Meta webhook alındı", { leadgenCount: leadgenIds.length });
   const admin = createAdminClient();
 
   for (const leadgenId of leadgenIds) {
@@ -128,19 +133,22 @@ export async function POST(request: Request) {
       });
 
       if (error) {
-        console.error("create_lead_from_webhook başarısız, leadgen_id=", leadgenId, error);
+        logger.error("create_lead_from_webhook başarısız", { leadgenId, error: error.message });
         await admin.rpc("notify_admins_webhook_lead_failure", {
           p_source: "Meta Lead Ads",
           p_external_ref: leadgenId,
           p_error_message: error.message,
         });
+      } else {
+        logger.info("Meta lead işlendi", { leadgenId });
       }
     } catch (err) {
-      console.error("Meta lead işlenemedi, leadgen_id=", leadgenId, err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logger.error("Meta lead işlenemedi", { leadgenId, error: errorMessage });
       await admin.rpc("notify_admins_webhook_lead_failure", {
         p_source: "Meta Lead Ads",
         p_external_ref: leadgenId,
-        p_error_message: err instanceof Error ? err.message : String(err),
+        p_error_message: errorMessage,
       });
     }
   }
@@ -148,6 +156,6 @@ export async function POST(request: Request) {
   // Meta başarısız (non-2xx) yanıtları tekrar dener — kalıcı hatalarda
   // (örn. o leadgen_id için Graph API kalıcı olarak başarısız oluyorsa)
   // sonsuz retry istemiyoruz, bu yüzden hata durumunda bile 200 dönüyoruz;
-  // asıl hata sunucu loguna yazılıyor.
-  return new NextResponse("OK", { status: 200 });
+  // asıl hata (correlationId ile) sunucu loguna yazılıyor.
+  return new NextResponse("OK", { status: 200, headers: { "x-correlation-id": logger.correlationId } });
 }

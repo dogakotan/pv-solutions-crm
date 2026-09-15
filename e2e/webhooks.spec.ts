@@ -47,6 +47,17 @@ test.describe("Meta Lead Ads webhook (src/app/api/webhooks/meta-leads/route.ts)"
     });
     expect(res.status()).toBe(401);
   });
+
+  test("POST: yanıt gelen x-correlation-id'yi korur (yoksa üretir)", async ({ request }) => {
+    const withoutId = await request.post("/api/webhooks/meta-leads", { data: JSON.stringify({ entry: [] }) });
+    expect(withoutId.headers()["x-correlation-id"]).toBeTruthy();
+
+    const withId = await request.post("/api/webhooks/meta-leads", {
+      data: JSON.stringify({ entry: [] }),
+      headers: { "x-correlation-id": "e2e-fixed-correlation-id" },
+    });
+    expect(withId.headers()["x-correlation-id"]).toBe("e2e-fixed-correlation-id");
+  });
 });
 
 test.describe("Google Ads Lead Form webhook (src/app/api/webhooks/google-leads/route.ts)", () => {

@@ -2,6 +2,7 @@ import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createLogger, correlationIdFromRequest } from "@/lib/logger";
 
 /**
  * Google Ads Lead Form webhook — Meta'nın aksine OAuth/imza gerektirmiyor,
@@ -48,32 +49,48 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Too many requests" }, { status: 429 });
   }
 
+  const logger = createLogger(correlationIdFromRequest(request));
   const webhookKey = process.env.GOOGLE_ADS_WEBHOOK_KEY;
 
   if (!webhookKey) {
-    console.error("GOOGLE_ADS_WEBHOOK_KEY tanımlı değil");
-    return NextResponse.json({ message: "Not configured" }, { status: 500 });
+    logger.error("GOOGLE_ADS_WEBHOOK_KEY tanımlı değil");
+    return NextResponse.json(
+      { message: "Not configured" },
+      { status: 500, headers: { "x-correlation-id": logger.correlationId } }
+    );
   }
 
   let payload: GoogleLeadWebhookPayload;
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json({ message: "Invalid payload" }, { status: 400 });
+    logger.warn("Geçersiz JSON payload");
+    return NextResponse.json(
+      { message: "Invalid payload" },
+      { status: 400, headers: { "x-correlation-id": logger.correlationId } }
+    );
   }
 
   if (!payload.google_key || !keysMatch(payload.google_key, webhookKey)) {
-    return NextResponse.json({ message: "Invalid key" }, { status: 401 });
+    logger.warn("Geçersiz google_key");
+    return NextResponse.json(
+      { message: "Invalid key" },
+      { status: 401, headers: { "x-correlation-id": logger.correlationId } }
+    );
   }
 
   // "Send test data" doğrulama isteği — gerçek bir lead değil, havuzu
   // kirletmemek için oluşturmadan başarıyla yanıtlıyoruz.
   if (payload.is_test) {
-    return NextResponse.json({});
+    return NextResponse.json({}, { headers: { "x-correlation-id": logger.correlationId } });
   }
 
   if (!payload.lead_id) {
-    return NextResponse.json({ message: "Missing lead_id" }, { status: 400 });
+    logger.warn("lead_id eksik");
+    return NextResponse.json(
+      { message: "Missing lead_id" },
+      { status: 400, headers: { "x-correlation-id": logger.correlationId } }
+    );
   }
 
   const columns = payload.user_column_data ?? [];
@@ -91,14 +108,18 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    console.error("create_lead_from_webhook başarısız, lead_id=", payload.lead_id, error);
+    logger.error("create_lead_from_webhook başarısız", { leadId: payload.lead_id, error: error.message });
     await admin.rpc("notify_admins_webhook_lead_failure", {
       p_source: "Google Ads Lead Form",
       p_external_ref: payload.lead_id,
       p_error_message: error.message,
     });
-    return NextResponse.json({ message: "Internal error" }, { status: 500 });
+    return NextResponse.json(
+      { message: "Internal error" },
+      { status: 500, headers: { "x-correlation-id": logger.correlationId } }
+    );
   }
 
-  return NextResponse.json({});
+  logger.info("Google Ads lead işlendi", { leadId: payload.lead_id });
+  return NextResponse.json({}, { headers: { "x-correlation-id": logger.correlationId } });
 }

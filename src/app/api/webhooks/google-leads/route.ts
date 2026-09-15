@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * Google Ads Lead Form webhook — Meta'nın aksine OAuth/imza gerektirmiyor,
@@ -38,6 +39,15 @@ function columnValue(columns: GoogleLeadColumn[], columnId: string): string | un
 }
 
 export async function POST(request: Request) {
+  const { rateLimited } = await checkRateLimit(request, {
+    key: "google-leads-webhook-post",
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (rateLimited) {
+    return NextResponse.json({ message: "Too many requests" }, { status: 429 });
+  }
+
   const webhookKey = process.env.GOOGLE_ADS_WEBHOOK_KEY;
 
   if (!webhookKey) {

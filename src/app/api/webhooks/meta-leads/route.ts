@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * Meta Lead Ads webhook — reklam formundan gelen leadleri otomatik
@@ -17,6 +18,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const META_GRAPH_VERSION = "v21.0";
 
 export async function GET(request: Request) {
+  const { rateLimited } = await checkRateLimit(request, {
+    key: "meta-leads-webhook-get",
+    limit: 20,
+    windowMs: 60_000,
+  });
+  if (rateLimited) {
+    return new NextResponse("Too many requests", { status: 429 });
+  }
+
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
   const token = url.searchParams.get("hub.verify_token");
@@ -64,6 +74,15 @@ async function fetchLeadFieldData(leadgenId: string, pageAccessToken: string): P
 }
 
 export async function POST(request: Request) {
+  const { rateLimited } = await checkRateLimit(request, {
+    key: "meta-leads-webhook-post",
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (rateLimited) {
+    return new NextResponse("Too many requests", { status: 429 });
+  }
+
   const appSecret = process.env.META_WEBHOOK_APP_SECRET;
   const pageAccessToken = process.env.META_PAGE_ACCESS_TOKEN;
 

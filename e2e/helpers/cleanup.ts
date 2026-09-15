@@ -134,6 +134,11 @@ export async function createTestReferral(fields: {
   return data.id;
 }
 
+export async function deleteNotificationByDedupKey(dedupKey: string): Promise<void> {
+  const { error } = await adminClient().from("notifications").delete().eq("dedup_key", dedupKey);
+  if (error) throw error;
+}
+
 export async function findPartnerIdByEmail(email: string): Promise<string | null> {
   const { data, error } = await adminClient()
     .from("profiles")

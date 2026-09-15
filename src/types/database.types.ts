@@ -1663,6 +1663,14 @@ export type Database = {
           open_lead_count: number
         }[]
       }
+      notify_admins_webhook_lead_failure: {
+        Args: {
+          p_error_message: string
+          p_external_ref: string
+          p_source: string
+        }
+        Returns: undefined
+      }
       provision_partner_employee: {
         Args: {
           p_partner_id: string

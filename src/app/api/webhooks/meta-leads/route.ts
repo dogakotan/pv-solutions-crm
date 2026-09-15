@@ -110,9 +110,19 @@ export async function POST(request: Request) {
 
       if (error) {
         console.error("create_lead_from_webhook başarısız, leadgen_id=", leadgenId, error);
+        await admin.rpc("notify_admins_webhook_lead_failure", {
+          p_source: "Meta Lead Ads",
+          p_external_ref: leadgenId,
+          p_error_message: error.message,
+        });
       }
     } catch (err) {
       console.error("Meta lead işlenemedi, leadgen_id=", leadgenId, err);
+      await admin.rpc("notify_admins_webhook_lead_failure", {
+        p_source: "Meta Lead Ads",
+        p_external_ref: leadgenId,
+        p_error_message: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 

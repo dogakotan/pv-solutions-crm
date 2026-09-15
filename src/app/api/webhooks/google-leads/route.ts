@@ -82,6 +82,11 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("create_lead_from_webhook başarısız, lead_id=", payload.lead_id, error);
+    await admin.rpc("notify_admins_webhook_lead_failure", {
+      p_source: "Google Ads Lead Form",
+      p_external_ref: payload.lead_id,
+      p_error_message: error.message,
+    });
     return NextResponse.json({ message: "Internal error" }, { status: 500 });
   }
 

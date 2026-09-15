@@ -128,14 +128,18 @@ test.describe("Partnere tekli atama (assign_lead_to_partner RPC)", () => {
   test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");
 
   test("admin, kuyruktaki bir lead'i partnere atayabilir", async ({ page }) => {
-    const salesUserId = await findUserIdByEmail(process.env.SALES_TEST_EMAIL!);
-    expect(salesUserId).not.toBeNull();
+    // get_leads_needing_partner_assignment yalnızca sales_user_id'nin dolu
+    // olmasını arıyor, belirli bir role bağlı değil — SALES_TEST_EMAIL CI'da
+    // henüz tanımlı değil (bkz. diğer testlerdeki skip'ler), admin'in kendi
+    // id'si burada aynı işi görüyor.
+    const adminId = await findUserIdByEmail(email!);
+    expect(adminId).not.toBeNull();
 
     const customerName = `E2E Partner Assign ${Date.now()}`;
     const leadId = await createTestLead({
       customerName,
-      ownerId: salesUserId!,
-      salesUserId: salesUserId!,
+      ownerId: adminId!,
+      salesUserId: adminId!,
       stage: "referred",
     });
 

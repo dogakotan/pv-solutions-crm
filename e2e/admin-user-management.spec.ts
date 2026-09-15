@@ -40,7 +40,10 @@ test.describe("Kullanıcı rolü/durumu yönetimi (set_user_role / set_user_acti
       // set_user_role
       await row.locator('select[name="role"]').selectOption("first_call");
       await row.getByRole("button", { name: "Kaydet" }).click();
-      await page.waitForTimeout(500);
+      // Buton, server action'ın (fetch tabanlı, client-side await edilen)
+      // isteği tamamlanana kadar "Kaydediliyor..." gösterip disable oluyor —
+      // sabit bir waitForTimeout yerine bu durumun geçmesini bekle.
+      await expect(row.getByRole("button", { name: "Kaydet" })).toBeEnabled({ timeout: 10_000 });
       await page.goto("/admin/users");
       await expect(
         page.locator("tbody tr").filter({ hasText: fullName }).locator('select[name="role"]')

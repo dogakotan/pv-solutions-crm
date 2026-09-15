@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+// global-error kendi ayrı belgesini render eder ve layout.tsx'teki
+// globals.css import'unu miras almaz (bkz. Next.js error.js dokümanı,
+// "Good to know" notu) — bu yüzden burada ayrıca import ediliyor,
+// aksi halde bu son çare ekranı stilsiz/çıplak HTML olarak görünür.
+import "./globals.css";
 
 export default function GlobalError({
   error,

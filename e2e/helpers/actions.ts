@@ -8,10 +8,10 @@ import type { Page } from "@playwright/test";
  * yapıp oturumu düşürür (bu, ilk yazımda gerçekten yaşanan bir hataydı).
  */
 
-export async function createLeadViaUi(page: Page, customerName: string): Promise<void> {
+export async function createLeadViaUi(page: Page, customerName: string, phone?: string): Promise<void> {
   await page.goto("/first-call/new-lead");
   await page.fill('input[name="customerName"]', customerName);
-  await page.fill('input[name="phone"]', `05${Date.now().toString().slice(-9)}`);
+  await page.fill('input[name="phone"]', phone ?? `05${Date.now().toString().slice(-9)}`);
   await page.fill('input[name="city"]', "İstanbul");
   // Kaynak alanı artık sabit bir listeden seçiliyor (name="source" olan
   // input hidden ve bu seçime göre türetiliyor) — görünür <select>'in kendi

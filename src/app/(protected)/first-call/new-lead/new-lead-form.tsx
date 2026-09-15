@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import Link from "next/link";
 import { createLead, type NewLeadState } from "./actions";
 import { LeadStageBadge } from "@/components/lead-badges";
@@ -25,21 +25,31 @@ const SOURCE_OPTIONS = [
 
 export function NewLeadForm() {
   const [state, formAction, pending] = useActionState(createLead, initialState);
-  const [confirmDuplicate, setConfirmDuplicate] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
+  // customerName/phone/city kontrollü tutuluyor — React, action tamamlandığında
+  // (duplicate uyarısı dönse bile) formu otomatik resetliyor; kontrolsüz
+  // input'lar bu sırada sessizce boşalıyor, "Yine de yeni lead oluştur"
+  // tıklandığında sunucuya boş alanlarla gidip "en az 2 karakter" hatası
+  // veriyordu (gerçek kullanıcıyı da etkileyen bir bug — sadece kendi
+  // seçimi "inbound_call" durumunu koruyan kontrollü "Kaynak" alanı sağ
+  // kalıyordu).
+  const [customerName, setCustomerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
   const [sourceOption, setSourceOption] = useState("");
   const [sourceOther, setSourceOther] = useState("");
   const [showQualification, setShowQualification] = useState(false);
 
-  function handleConfirmAnyway() {
-    setConfirmDuplicate(true);
-    formRef.current?.requestSubmit();
+  function handleConfirmAnyway(event: React.MouseEvent<HTMLButtonElement>) {
+    const form = event.currentTarget.form;
+    if (!form) return;
+    const formData = new FormData(form);
+    formData.set("confirmDuplicate", "true");
+    startTransition(() => formAction(formData));
   }
 
   return (
-    <form ref={formRef} action={formAction} className="flex flex-col gap-4">
-      <input type="hidden" name="confirmDuplicate" value={confirmDuplicate ? "true" : "false"} />
+    <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -52,7 +62,13 @@ export function NewLeadForm() {
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-foreground">Müşteri adı</label>
-          <input name="customerName" required className={inputClass} />
+          <input
+            name="customerName"
+            required
+            className={inputClass}
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-foreground">Telefon</label>
@@ -60,12 +76,19 @@ export function NewLeadForm() {
             name="phone"
             required
             className={inputClass}
-            onChange={() => setConfirmDuplicate(false)}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
           />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-foreground">Şehir</label>
-          <input name="city" required className={inputClass} />
+          <input
+            name="city"
+            required
+            className={inputClass}
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-foreground">Kaynak</label>

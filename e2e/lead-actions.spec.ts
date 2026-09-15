@@ -136,3 +136,36 @@ test.describe("Lead silme (soft_delete_lead RPC)", () => {
     }
   });
 });
+
+test.describe("Önerilen partnerler (get_recommended_partners_for_lead RPC)", () => {
+  const email = process.env.E2E_TEST_EMAIL;
+  const password = process.env.E2E_TEST_PASSWORD;
+
+  test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
+  test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");
+
+  test("aktif referral'ı olmayan bir lead için semt/şehre uygun partnerler önerilir ve atanabilir", async ({ page }) => {
+    const adminId = await findUserIdByEmail(email!);
+    expect(adminId).not.toBeNull();
+
+    // Şehir "İstanbul" — seed verisindeki birden çok aktif partner (ör.
+    // "Boğaziçi Solar Sistemleri") bu şehirde, referral'sız bir lead bu
+    // yüzden öneri listesinde en az bir eşleşme bulur.
+    const customerName = `E2E Recommend Test ${Date.now()}`;
+    const leadId = await createTestLead({ customerName, ownerId: adminId! });
+
+    try {
+      await loginAs(page, email!, password!);
+      await page.goto(`/leads/${leadId}`);
+
+      await expect(page.getByText("Partner Ataması")).toBeVisible();
+      const row = page.locator("tbody tr").first();
+      await expect(row).toBeVisible();
+      await row.getByRole("button", { name: "Ata" }).click();
+
+      await expect(page.getByText("Partner Aktivitesi")).toBeVisible({ timeout: 10_000 });
+    } finally {
+      await deleteLead(leadId);
+    }
+  });
+});

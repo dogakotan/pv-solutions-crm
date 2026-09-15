@@ -61,6 +61,12 @@ test.describe("teklif gönderme ve revize etme (create_offer / revise_offer RPC)
       // dialog'unda iki kez geçiyor — tek buton olarak, birleşik erişilebilir
       // adıyla (Rev.0 ... Eski Revizyon) daraltmak gerekiyor.
       await expect(page.getByRole("button", { name: /Rev\.0.*Eski Revizyon/ })).toBeVisible();
+
+      // delete_offer_version RPC — sadece "accepted" olmayan revizyonlar
+      // silinebilir; Rev.1 şu an "open" durumda, Rev.1'in satırını açıp Sil'i tıkla.
+      await page.getByRole("button", { name: /Rev\.1/ }).click();
+      await page.getByRole("button", { name: "Sil", exact: true }).click();
+      await expect(page.getByRole("button", { name: /Rev\.1/ })).toHaveCount(0, { timeout: 10_000 });
     } finally {
       const leadId = await findLeadIdByCustomerName(customerName);
       if (leadId) await deleteLead(leadId);

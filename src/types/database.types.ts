@@ -1877,6 +1877,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      respond_to_offer: {
+        Args: { p_decision: string; p_offer_version_id: string }
+        Returns: {
+          amount: number
+          created_at: string
+          created_by: string
+          currency: string
+          id: string
+          offer_id: string
+          payment_method: string | null
+          revision_no: number
+          scope_summary: string | null
+          sent_at: string | null
+          shipping_terms: string | null
+          status: string
+          valid_until: string | null
+          vat_included: boolean
+        }
+        SetofOptions: {
+          from: "*"
+          to: "offer_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       respond_to_referral: {
         Args: {
           p_decision: string

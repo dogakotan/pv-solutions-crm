@@ -13,16 +13,21 @@ export function OfferVersionRow({
   excelHref,
   canDelete,
   deleteAction,
+  canRespond,
+  respondAction,
   hiddenFields,
 }: {
   version: OfferVersionItem;
   excelHref: string;
   canDelete: boolean;
   deleteAction: (formData: FormData) => void | Promise<void>;
+  canRespond?: boolean;
+  respondAction?: (formData: FormData) => void | Promise<void>;
   hiddenFields: Record<string, string>;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const showDeleteButton = canDelete && !NON_DELETABLE_STATUSES.has(version.status);
+  const showRespondButtons = canRespond && respondAction && version.status === "sent";
 
   return (
     <>
@@ -137,6 +142,34 @@ export function OfferVersionRow({
             >
               Excel İndir
             </a>
+            {showRespondButtons && (
+              <>
+                <form action={respondAction}>
+                  {Object.entries(hiddenFields).map(([name, value]) => (
+                    <input key={name} type="hidden" name={name} value={value} />
+                  ))}
+                  <input type="hidden" name="decision" value="accept" />
+                  <button
+                    type="submit"
+                    className="rounded-lg border border-green-200 px-3 py-1.5 text-xs text-green-700 hover:bg-green-50"
+                  >
+                    Kabul Et
+                  </button>
+                </form>
+                <form action={respondAction}>
+                  {Object.entries(hiddenFields).map(([name, value]) => (
+                    <input key={name} type="hidden" name={name} value={value} />
+                  ))}
+                  <input type="hidden" name="decision" value="reject" />
+                  <button
+                    type="submit"
+                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                  >
+                    Reddet
+                  </button>
+                </form>
+              </>
+            )}
             {showDeleteButton && (
               <form action={deleteAction}>
                 {Object.entries(hiddenFields).map(([name, value]) => (

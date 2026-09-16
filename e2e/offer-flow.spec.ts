@@ -5,6 +5,7 @@ import {
   createTestReferral,
   deleteLead,
   findLeadIdByCustomerName,
+  findOfferIdByLeadId,
   findUserIdByEmail,
   findPartnerIdByEmail,
   hasCleanupCredentials,
@@ -13,6 +14,9 @@ import {
 const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
 const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
 const PARTNER_ADMIN_TEST_EMAIL = process.env.PARTNER_ADMIN_TEST_EMAIL;
+const PARTNER_ADMIN_TEST_PASSWORD = process.env.PARTNER_ADMIN_TEST_PASSWORD;
+const PARTNER_EMPLOYEE_TEST_EMAIL = process.env.PARTNER_EMPLOYEE_TEST_EMAIL;
+const PARTNER_EMPLOYEE_TEST_PASSWORD = process.env.PARTNER_EMPLOYEE_TEST_PASSWORD;
 
 test.describe("teklif gönderme ve revize etme (create_offer / revise_offer RPC)", () => {
   test.skip(
@@ -67,6 +71,93 @@ test.describe("teklif gönderme ve revize etme (create_offer / revise_offer RPC)
       await page.getByRole("button", { name: /Rev\.1/ }).click();
       await page.getByRole("button", { name: "Sil", exact: true }).click();
       await expect(page.getByRole("button", { name: /Rev\.1/ })).toHaveCount(0, { timeout: 10_000 });
+    } finally {
+      const leadId = await findLeadIdByCustomerName(customerName);
+      if (leadId) await deleteLead(leadId);
+    }
+  });
+});
+
+test.describe("teklif kabul/red (respond_to_offer RPC)", () => {
+  test.skip(
+    !TEST_EMAIL ||
+      !TEST_PASSWORD ||
+      !PARTNER_ADMIN_TEST_EMAIL ||
+      !PARTNER_ADMIN_TEST_PASSWORD ||
+      !PARTNER_EMPLOYEE_TEST_EMAIL ||
+      !PARTNER_EMPLOYEE_TEST_PASSWORD ||
+      !hasCleanupCredentials(),
+    "E2E_TEST_EMAIL / PARTNER_ADMIN_TEST_EMAIL / PARTNER_EMPLOYEE_TEST_EMAIL kimlik bilgileri tanımlı değil — .env.local'e bakınız",
+  );
+
+  // NOT: aynı page/context üzerinde üç farklı hesapla art arda loginAs
+  // çağırmak, bilinen ve hâlâ çözülmemiş bir stale-redirect-cache bug'ını
+  // tetikliyor (bkz. proje belleği "Cache Components App Shell stale
+  // refresh" — router.refresh()/revalidatePath+redirect bazen önceki
+  // oturumun cache'lenmiş yönlendirmesini gösteriyor). Codebase'teki her
+  // çok-rollü test zaten ayrı test() bloğu (dolayısıyla ayrı page fixture'ı)
+  // kullanıyor — burada da rol geçişi başına ayrı bir browser context açılıyor.
+  test("partner_admin gönderilmiş bir teklifi kabul edebilir, partner_employee edemez", async ({ page, browser }) => {
+    const customerName = `E2E-Respond-${Date.now()}`;
+
+    try {
+      await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);
+      await createLeadViaUi(page, customerName);
+      const leadId = await findLeadIdByCustomerName(customerName);
+      expect(leadId).toBeTruthy();
+
+      const [adminId, partnerId, employeeId] = await Promise.all([
+        findUserIdByEmail(TEST_EMAIL!),
+        findPartnerIdByEmail(PARTNER_ADMIN_TEST_EMAIL!),
+        findUserIdByEmail(PARTNER_EMPLOYEE_TEST_EMAIL!),
+      ]);
+      expect(adminId).not.toBeNull();
+      expect(partnerId).not.toBeNull();
+      expect(employeeId).not.toBeNull();
+      // assigned_employee_id kasıtlı olarak set ediliyor — aksi halde
+      // partner_employee bu referral'ı (offers_select RLS'i gereği) hiç
+      // göremez ve test, var olmayan bir butonu tıklamaya çalışıp zaman
+      // aşımına uğrar. Amaç employee'nin teklifi GÖREBİLDİĞİNİ ama
+      // yanıtlayamadığını doğrulamak — hiç görememesini değil.
+      await createTestReferral({
+        leadId: leadId!,
+        partnerId: partnerId!,
+        referredBy: adminId!,
+        assignedEmployeeId: employeeId!,
+      });
+
+      await page.goto(`/leads/${leadId}`);
+      await page.getByRole("button", { name: "Teklif Gönder" }).click();
+      await page.fill('input[name="amount"]', "10000");
+      await page.getByRole("button", { name: "Teklifi Gönder" }).click();
+      await expect(page.getByRole("button", { name: /Rev\.0/ })).toBeVisible({ timeout: 15_000 });
+
+      const offerId = await findOfferIdByLeadId(leadId!);
+      expect(offerId).toBeTruthy();
+
+      // partner_employee'nin Kabul Et/Reddet butonlarını hiç görmemesi
+      // gerekiyor — offers_update RLS/respond_to_offer RPC'nin bilinçli
+      // olarak yalnızca partner_admin'e izin verme kuralı burada UI
+      // seviyesinde de yansıtılıyor.
+      const employeeContext = await browser.newContext();
+      const employeePage = await employeeContext.newPage();
+      await loginAs(employeePage, PARTNER_EMPLOYEE_TEST_EMAIL!, PARTNER_EMPLOYEE_TEST_PASSWORD!);
+      await employeePage.goto(`/offers/${offerId}`);
+      await employeePage.getByRole("button", { name: /Rev\.0/ }).click();
+      await expect(employeePage.getByRole("button", { name: "Kabul Et" })).toHaveCount(0);
+      await expect(employeePage.getByRole("button", { name: "Reddet" })).toHaveCount(0);
+      await employeeContext.close();
+
+      const adminPartnerContext = await browser.newContext();
+      const adminPartnerPage = await adminPartnerContext.newPage();
+      await loginAs(adminPartnerPage, PARTNER_ADMIN_TEST_EMAIL!, PARTNER_ADMIN_TEST_PASSWORD!);
+      await adminPartnerPage.goto(`/offers/${offerId}`);
+      await adminPartnerPage.getByRole("button", { name: /Rev\.0/ }).click();
+      await adminPartnerPage.getByRole("button", { name: "Kabul Et" }).click();
+      await expect(adminPartnerPage.getByRole("button", { name: /Rev\.0.*Kabul Edildi/ })).toBeVisible({
+        timeout: 10_000,
+      });
+      await adminPartnerContext.close();
     } finally {
       const leadId = await findLeadIdByCustomerName(customerName);
       if (leadId) await deleteLead(leadId);

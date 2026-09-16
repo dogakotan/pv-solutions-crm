@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { BackLink } from "@/components/back-link";
 import { CardSkeleton } from "@/components/skeletons";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserRole } from "@/lib/auth/require-role";
 import { OfferStatusBadge } from "@/components/offer-badges";
 import { OfferVersionRow } from "@/components/offer-version-row";
 import { getOfferById, getOfferVersions } from "@/lib/data/offers";
-import { deleteOfferVersion } from "@/app/(protected)/leads/[id]/actions";
+import { deleteOfferVersion, respondToOffer } from "@/app/(protected)/leads/[id]/actions";
 
 export default async function OfferDetailPage({
   params,
@@ -45,7 +46,10 @@ export default async function OfferDetailPage({
 
 async function RevisionsCard({ offerId }: { offerId: string }) {
   const supabase = await createClient();
-  const versions = await getOfferVersions(supabase, offerId);
+  const [versions, { dbRole }] = await Promise.all([
+    getOfferVersions(supabase, offerId),
+    getCurrentUserRole(),
+  ]);
 
   return (
     <div className="rounded-2xl border border-card-border bg-card p-6 shadow-sm">
@@ -62,6 +66,8 @@ async function RevisionsCard({ offerId }: { offerId: string }) {
               excelHref={`/offers/${offerId}/versions/${version.id}/excel`}
               canDelete
               deleteAction={deleteOfferVersion}
+              canRespond={dbRole === "partner_admin"}
+              respondAction={respondToOffer}
               hiddenFields={{ offerId, offerVersionId: version.id }}
             />
           ))}

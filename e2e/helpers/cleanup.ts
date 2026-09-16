@@ -117,6 +117,7 @@ export async function createTestReferral(fields: {
   leadId: string;
   partnerId: string;
   referredBy: string;
+  assignedEmployeeId?: string;
 }): Promise<string> {
   const { data, error } = await adminClient()
     .from("partner_referrals")
@@ -124,6 +125,7 @@ export async function createTestReferral(fields: {
       lead_id: fields.leadId,
       partner_id: fields.partnerId,
       referred_by: fields.referredBy,
+      assigned_employee_id: fields.assignedEmployeeId ?? null,
       status: "pending",
       sent_at: new Date().toISOString(),
       response_due_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
@@ -137,6 +139,16 @@ export async function createTestReferral(fields: {
 export async function deleteNotificationByDedupKey(dedupKey: string): Promise<void> {
   const { error } = await adminClient().from("notifications").delete().eq("dedup_key", dedupKey);
   if (error) throw error;
+}
+
+export async function findOfferIdByLeadId(leadId: string): Promise<string | null> {
+  const { data, error } = await adminClient()
+    .from("offers")
+    .select("id")
+    .eq("lead_id", leadId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
 }
 
 export async function findPartnerIdByEmail(email: string): Promise<string | null> {

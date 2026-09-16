@@ -469,6 +469,33 @@ export async function deleteOfferVersion(formData: FormData) {
 }
 
 /**
+ * Partnerin gönderilmiş bir teklif revizyonunu kabul/red etmesi — yetki
+ * (yalnızca partner_admin) ve durum kontrolü (yalnızca 'sent') RPC'nin
+ * içinde yapılıyor, bkz. respond_to_offer_rpc migration'ı. Nihai satış
+ * sonucuna (won/lost) dokunmuyor, bu hâlâ ayrı bir adım.
+ */
+export async function respondToOffer(formData: FormData) {
+  const offerId = String(formData.get("offerId") ?? "").trim();
+  const offerVersionId = String(formData.get("offerVersionId") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+
+  if (!offerVersionId || (decision !== "accept" && decision !== "reject")) {
+    throw new Error("Geçersiz istek.");
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("respond_to_offer", {
+    p_offer_version_id: offerVersionId,
+    p_decision: decision,
+  });
+
+  if (error) throw new Error(error.message);
+
+  if (offerId) revalidatePath(`/offers/${offerId}`);
+  revalidatePath("/offers");
+}
+
+/**
  * Yalnızca pv_admin çağırabilir (yetki kontrolü soft_delete_lead RPC'sinin
  * içinde) — lead'i kalıcı silmez, deleted_at/deleted_by set eder ve
  * audit_logs'a yazar (bkz. lead_protected_columns_and_assignment_rpc

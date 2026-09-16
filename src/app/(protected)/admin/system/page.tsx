@@ -37,6 +37,14 @@ async function CronJobsTable() {
   const supabase = await createClient();
   const jobs = await getCronJobStatuses(supabase);
 
+  if (jobs.length === 0) {
+    return (
+      <p className="rounded-2xl border border-card-border bg-card p-6 text-sm text-muted shadow-sm">
+        Kayıtlı bir pg_cron işi bulunamadı.
+      </p>
+    );
+  }
+
   return (
     <div className="overflow-x-auto rounded-2xl border border-card-border bg-card shadow-sm">
       <table className="w-full text-left text-sm">

@@ -173,4 +173,5 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   create_partner: "Partner Oluşturuldu",
   set_partner_rating: "Partner Puanı Değiştirildi",
   set_partner_status: "Partner Durumu Değiştirildi",
+  update_sales_outcome_fulfillment: "Malzeme/ERP Durumu Güncellendi",
 };

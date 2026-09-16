@@ -45,6 +45,38 @@ test.describe("Satış sonucu kaydetme (record_sales_outcome RPC)", () => {
     }
   });
 
+  test("sales kullanıcısı 'Kaybedildi' bir lead'i yeniden açabilir (reactivate_lead RPC)", async ({ page }) => {
+    const salesUserId = await findUserIdByEmail(email!);
+    expect(salesUserId).not.toBeNull();
+
+    const customerName = `E2E Reactivate Test ${Date.now()}`;
+    const leadId = await createTestLead({
+      customerName,
+      ownerId: salesUserId!,
+      salesUserId: salesUserId!,
+    });
+
+    try {
+      await loginAs(page, email!, password!);
+      await page.goto(`/leads/${leadId}`);
+
+      await page.getByRole("button", { name: "Kaybedildi" }).click();
+      await page.fill('input[name="lostReason"]', "E2E reactivate testi");
+      await page.getByRole("button", { name: "Sonucu Kaydet" }).click();
+      await expect(page.getByText("E2E reactivate testi")).toBeVisible({ timeout: 10_000 });
+
+      await page.getByRole("button", { name: "Yeniden Aç" }).click();
+
+      // reactivate_lead lead.stage'i 'contacted'a döndürüyor — özet
+      // (outcome hâlâ 'lost' ama stage artık eşleşmiyor) kaybolup yeni bir
+      // sonuç kaydedilebilecek boş form yeniden görünmeli.
+      await expect(page.getByRole("button", { name: "Sonucu Kaydet" })).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText("E2E reactivate testi")).toHaveCount(0);
+    } finally {
+      await deleteLead(leadId);
+    }
+  });
+
   test("sales kullanıcısı 'Kazanıldı' sonrası malzeme/ERP durumunu güncelleyebilir (update_sales_outcome_fulfillment RPC)", async ({
     page,
   }) => {

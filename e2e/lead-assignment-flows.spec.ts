@@ -120,6 +120,59 @@ test.describe("Satışa toplu atama (assignManyToSales)", () => {
   });
 });
 
+// İkinci tur inceleme: assignManyToSales'in e2e testi vardı ama partner
+// muadili assignManyToPartner'ın hiç yoktu — LeadAssignmentQueue'nun
+// bulkAssignAction'ı iki akış için de aynı bileşen olsa da, gerçek
+// çalıştığı ayrı bir RPC/server action ve doğrulanmamış kalıyordu.
+test.describe("Partnere toplu atama (assignManyToPartner)", () => {
+  const email = process.env.E2E_TEST_EMAIL;
+  const password = process.env.E2E_TEST_PASSWORD;
+
+  test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
+  test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");
+
+  test("iki lead seçip toplu olarak bir partnere atanabilir", async ({ page }) => {
+    const adminId = await findUserIdByEmail(email!);
+    expect(adminId).not.toBeNull();
+
+    const suffix = Date.now();
+    const name1 = `E2E Partner Bulk A ${suffix}`;
+    const name2 = `E2E Partner Bulk B ${suffix}`;
+    const leadIds = await Promise.all(
+      [name1, name2].map((name) =>
+        createTestLead({ customerName: name, ownerId: adminId!, salesUserId: adminId!, stage: "referred" })
+      )
+    );
+
+    try {
+      await loginAs(page, email!, password!);
+      await page.goto("/admin/assignments");
+
+      const section = page.locator("section", { hasText: "Partnere Atama Bekleyen Leadler" });
+      const row1 = section.locator("tbody tr").filter({ hasText: name1 });
+      const row2 = section.locator("tbody tr").filter({ hasText: name2 });
+      await expect(row1).toBeVisible();
+      await expect(row2).toBeVisible();
+
+      await row1.getByRole("checkbox").check();
+      await row2.getByRole("checkbox").check();
+      await expect(section.getByText("2 seçili")).toBeVisible();
+
+      const bulkSelect = section.locator("select").filter({ hasText: "Partner seç" }).first();
+      const partnerOptionValue = await bulkSelect.locator("option").nth(1).getAttribute("value");
+      await bulkSelect.selectOption(partnerOptionValue!);
+
+      await section.getByRole("button", { name: "Seçilenleri Ata" }).click();
+
+      // Atama başarılı olunca kuyruktan (artık aktif bir referral'ı olduğu için) düşerler.
+      await expect(section.locator("tbody tr").filter({ hasText: name1 })).toHaveCount(0, { timeout: 10_000 });
+      await expect(section.locator("tbody tr").filter({ hasText: name2 })).toHaveCount(0, { timeout: 10_000 });
+    } finally {
+      await Promise.all(leadIds.map((id) => deleteLead(id)));
+    }
+  });
+});
+
 test.describe("Partnere tekli atama (assign_lead_to_partner RPC)", () => {
   const email = process.env.E2E_TEST_EMAIL;
   const password = process.env.E2E_TEST_PASSWORD;

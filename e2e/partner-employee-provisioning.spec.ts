@@ -37,6 +37,18 @@ test.describe("partner çalışanı ekleme (provision_partner_employee RPC)", ()
 
       await expect(page.getByText("Hesap oluşturuldu:")).toBeVisible({ timeout: 15_000 });
       await expect(page.getByText("Geçici şifre:")).toBeVisible();
+
+      // İkinci tur inceleme: set_user_active'i yeniden kullanan
+      // pasifleştirme/aktifleştirme kontrolünün hiç e2e testi yoktu.
+      const employeeRow = page.locator("tbody tr").filter({ hasText: "E2E Test Çalışanı" });
+      await expect(employeeRow).toBeVisible({ timeout: 10_000 });
+      await expect(employeeRow.getByText("Aktif", { exact: true })).toBeVisible();
+
+      await employeeRow.getByRole("button", { name: "Pasifleştir" }).click();
+      await expect(employeeRow.getByText("Pasif", { exact: true })).toBeVisible({ timeout: 10_000 });
+
+      await employeeRow.getByRole("button", { name: "Aktifleştir" }).click();
+      await expect(employeeRow.getByText("Aktif", { exact: true })).toBeVisible({ timeout: 10_000 });
     } finally {
       const userId = await findUserIdByEmail(employeeEmail);
       if (userId) await deleteTestUser(userId);

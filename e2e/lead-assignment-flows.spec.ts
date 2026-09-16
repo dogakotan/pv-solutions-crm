@@ -7,6 +7,7 @@ import {
   createTestLead,
   deleteLead,
   hasCleanupCredentials,
+  setLeadScoreForTest,
 } from "./helpers/cleanup";
 
 test.describe("Lead Havuzu — sahiplenme (claim_lead RPC)", () => {
@@ -33,7 +34,10 @@ test.describe("Lead Havuzu — sahiplenme (claim_lead RPC)", () => {
         lead_id: externalRef,
         google_key: webhookKey,
         is_test: false,
-        user_column_data: [{ column_id: "FULL_NAME", string_value: customerName }],
+        user_column_data: [
+          { column_id: "FULL_NAME", string_value: customerName },
+          { column_id: "PHONE_NUMBER", string_value: `05${Date.now().toString().slice(-9)}` },
+        ],
       },
     });
     expect(setupRes.status()).toBe(200);
@@ -83,6 +87,13 @@ test.describe("Satışa toplu atama (assignManyToSales)", () => {
         .selectOption("inbound_call");
       await page.getByRole("button", { name: "Lead Oluştur" }).click();
       await page.waitForURL(/\/first-call\/lead-pool/, { timeout: 15_000 });
+
+      // getLeadsNeedingSalesAssignment artık yalnızca nitelendirilmiş
+      // (lead_score dolu) lead'leri gösteriyor — bu test toplu atama UI'ını
+      // hedeflediği için nitelendirme formunu doldurmak yerine doğrudan
+      // set ediliyor.
+      const id = await findLeadIdByCustomerName(name);
+      if (id) await setLeadScoreForTest(id, "warm");
     }
 
     try {
@@ -116,6 +127,34 @@ test.describe("Satışa toplu atama (assignManyToSales)", () => {
         if (id) createdLeadIds.push(id);
       }
       await Promise.all(createdLeadIds.map((id) => deleteLead(id)));
+    }
+  });
+
+  // Dördüncü tur inceleme: getLeadsNeedingSalesAssignment lead_score
+  // filtresi taşımıyordu — hiç nitelendirilmemiş (aranmamış) bir lead de
+  // satışa atama kuyruğunda görünüyor, first_call'ın nitelendirme
+  // adımını atlayıp doğrudan satışa devretmesine izin veriyordu.
+  test("nitelendirilmemiş (lead_score boş) bir lead satışa atama kuyruğunda görünmez", async ({ page }) => {
+    const customerName = `E2E Unqualified ${Date.now()}`;
+
+    await loginAs(page, email!, password!);
+    await page.goto("/first-call/new-lead");
+    await page.fill('input[name="customerName"]', customerName);
+    await page.fill('input[name="phone"]', `05${Date.now().toString().slice(-9)}`);
+    await page.fill('input[name="city"]', "İstanbul");
+    await page
+      .locator("select")
+      .filter({ has: page.locator('option[value="inbound_call"]') })
+      .selectOption("inbound_call");
+    await page.getByRole("button", { name: "Lead Oluştur" }).click();
+    await page.waitForURL(/\/first-call\/lead-pool/, { timeout: 15_000 });
+
+    try {
+      await page.goto("/first-call/assignments");
+      await expect(page.locator("tbody tr").filter({ hasText: customerName })).toHaveCount(0);
+    } finally {
+      const id = await findLeadIdByCustomerName(customerName);
+      if (id) await deleteLead(id);
     }
   });
 });

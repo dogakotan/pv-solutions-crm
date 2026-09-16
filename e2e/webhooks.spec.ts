@@ -91,6 +91,24 @@ test.describe("Google Ads Lead Form webhook (src/app/api/webhooks/google-leads/r
     expect(await findLeadIdByExternalRef(leadId)).toBeNull();
   });
 
+  // Dördüncü tur inceleme: create_lead_from_webhook, boş bir telefonla
+  // (reklam formunda PHONE_NUMBER alanı eksik/adı uyuşmazsa) sessizce
+  // başarılı oluyordu — first_call'ın hiç arayamayacağı bir lead
+  // oluşuyordu ve notify_admins_webhook_lead_failure hiç tetiklenmiyordu.
+  test("POST: telefon numarası eksikse 500 döner, lead oluşturulmaz", async ({ request }) => {
+    const externalRef = `e2e-blank-phone-${Date.now()}`;
+    const res = await request.post("/api/webhooks/google-leads", {
+      data: {
+        lead_id: externalRef,
+        google_key: webhookKey,
+        is_test: false,
+        user_column_data: [{ column_id: "FULL_NAME", string_value: "Telefonsuz Test" }],
+      },
+    });
+    expect(res.status()).toBe(500);
+    expect(await findLeadIdByExternalRef(externalRef)).toBeNull();
+  });
+
   test("POST: geçerli payload ile paylaşımlı havuzda bir lead oluşturur (UTF-8 alanlar dahil)", async ({ request }) => {
     const externalRef = `e2e-valid-${Date.now()}`;
     const res = await request.post("/api/webhooks/google-leads", {

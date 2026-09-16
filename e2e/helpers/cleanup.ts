@@ -171,6 +171,23 @@ export async function findPartnerIdByEmail(email: string): Promise<string | null
   return data?.partner_id ?? null;
 }
 
+export async function getLeadQualificationForTest(
+  leadId: string
+): Promise<{ buildingType: string | null; generalNotes: string | null } | null> {
+  const { data, error } = await adminClient()
+    .from("leads")
+    .select("building_type, general_notes")
+    .eq("id", leadId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? { buildingType: data.building_type, generalNotes: data.general_notes } : null;
+}
+
+export async function setLeadScoreForTest(leadId: string, score: string): Promise<void> {
+  const { error } = await adminClient().from("leads").update({ lead_score: score }).eq("id", leadId);
+  if (error) throw error;
+}
+
 export async function getPartnerPerformanceRow(partnerId: string): Promise<{
   acceptance_rate: number;
   avg_response_hours: number | null;

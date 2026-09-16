@@ -37,6 +37,7 @@ export async function getLeadsNeedingSalesAssignment(
     .select("id, lead_no, customer_name, city, stage, lead_score")
     .is("sales_user_id", null)
     .is("deleted_at", null)
+    .not("lead_score", "is", null)
     .order("created_at", { ascending: true })
     .limit(limit);
 

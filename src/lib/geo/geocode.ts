@@ -26,7 +26,11 @@ async function tryGeocode(query: string): Promise<GeocodeResult | null> {
   const first = results[0];
   if (!first) return null;
 
-  return { lat: parseFloat(first.lat), lon: parseFloat(first.lon) };
+  const lat = parseFloat(first.lat);
+  const lon = parseFloat(first.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+  return { lat, lon };
 }
 
 /**

@@ -183,12 +183,14 @@ export default async function LeadDetailPage({
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">Çatı Alanı</dt>
-                <dd className="text-foreground">{lead.roofAreaM2 ? `${lead.roofAreaM2} m²` : "—"}</dd>
+                <dd className="text-foreground">
+                  {lead.roofAreaM2 != null ? `${lead.roofAreaM2} m²` : "—"}
+                </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">Tahmini Kapasite</dt>
                 <dd className="text-foreground">
-                  {lead.estimatedCapacityKwp ? `${lead.estimatedCapacityKwp} kWp` : "—"}
+                  {lead.estimatedCapacityKwp != null ? `${lead.estimatedCapacityKwp} kWp` : "—"}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">

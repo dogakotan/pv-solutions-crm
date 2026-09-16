@@ -27,15 +27,24 @@ export function InterestField({
   name,
   label,
   defaultValue,
+  value,
+  onChange,
 }: {
   name: string;
   label: string;
   defaultValue?: string | null;
+  value?: string;
+  onChange?: (value: string) => void;
 }) {
+  const controlledProps =
+    value !== undefined
+      ? { value, onChange: (e: { target: { value: string } }) => onChange?.(e.target.value) }
+      : { defaultValue: defaultValue ?? "" };
+
   return (
     <div className="flex flex-col gap-1">
       <label className="text-sm font-medium text-foreground">{label}</label>
-      <select name={name} defaultValue={defaultValue ?? ""} className={inputClass}>
+      <select name={name} className={inputClass} {...controlledProps}>
         {INTEREST_OPTIONS.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

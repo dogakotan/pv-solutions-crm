@@ -26,19 +26,41 @@ const SOURCE_OPTIONS = [
 export function NewLeadForm() {
   const [state, formAction, pending] = useActionState(createLead, initialState);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
-  // customerName/phone/city kontrollü tutuluyor — React, action tamamlandığında
-  // (duplicate uyarısı dönse bile) formu otomatik resetliyor; kontrolsüz
-  // input'lar bu sırada sessizce boşalıyor, "Yine de yeni lead oluştur"
-  // tıklandığında sunucuya boş alanlarla gidip "en az 2 karakter" hatası
-  // veriyordu (gerçek kullanıcıyı da etkileyen bir bug — sadece kendi
-  // seçimi "inbound_call" durumunu koruyan kontrollü "Kaynak" alanı sağ
-  // kalıyordu).
+  // customerName/phone/city (ve aşağıdaki tüm nitelendirme alanları)
+  // kontrollü tutuluyor — React, action tamamlandığında (duplicate uyarısı
+  // dönse bile) formu otomatik resetliyor; kontrolsüz input'lar bu sırada
+  // sessizce boşalıyor. "Yine de yeni lead oluştur" tıklandığında hem
+  // temel alanlar boş gidip "en az 2 karakter" hatası veriyordu, hem de
+  // (daha önce kontrolsüz bırakılan) Görüşme Detayları'na girilen her şey
+  // fark edilmeden kayboluyordu — kullanıcı hatasız bir kayıt görüp aslında
+  // nitelendirme verisinin hiç kaydedilmediğini anlamıyordu.
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [sourceOption, setSourceOption] = useState("");
   const [sourceOther, setSourceOther] = useState("");
   const [showQualification, setShowQualification] = useState(false);
+  const [qualification, setQualification] = useState({
+    leadScore: "",
+    buildingType: "",
+    district: "",
+    address: "",
+    alternatePhone: "",
+    email: "",
+    roofAreaM2: "",
+    estimatedCapacityKwp: "",
+    heatPumpInterest: "",
+    poolInterest: "",
+    evInterest: "",
+    batteryInterest: "",
+    competitorOfferStatus: "",
+    competitorOfferNote: "",
+    generalNotes: "",
+  });
+
+  function updateQualification<K extends keyof typeof qualification>(key: K, value: string) {
+    setQualification((prev) => ({ ...prev, [key]: value }));
+  }
 
   function handleConfirmAnyway(event: React.MouseEvent<HTMLButtonElement>) {
     const form = event.currentTarget.form;
@@ -156,7 +178,12 @@ export function NewLeadForm() {
         >
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Durum (Puan)</label>
-            <select name="leadScore" defaultValue="" className={inputClass}>
+            <select
+              name="leadScore"
+              value={qualification.leadScore}
+              onChange={(e) => updateQualification("leadScore", e.target.value)}
+              className={inputClass}
+            >
               {SCORE_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -166,44 +193,110 @@ export function NewLeadForm() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Bina Tipi</label>
-            <input name="buildingType" placeholder="Müstakil, apartman, işyeri..." className={inputClass} />
+            <input
+              name="buildingType"
+              placeholder="Müstakil, apartman, işyeri..."
+              className={inputClass}
+              value={qualification.buildingType}
+              onChange={(e) => updateQualification("buildingType", e.target.value)}
+            />
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Semt / İlçe</label>
-            <input name="district" className={inputClass} />
+            <input
+              name="district"
+              className={inputClass}
+              value={qualification.district}
+              onChange={(e) => updateQualification("district", e.target.value)}
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Açık Adres</label>
-            <input name="address" className={inputClass} />
+            <input
+              name="address"
+              className={inputClass}
+              value={qualification.address}
+              onChange={(e) => updateQualification("address", e.target.value)}
+            />
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Alternatif Telefon</label>
-            <input name="alternatePhone" className={inputClass} />
+            <input
+              name="alternatePhone"
+              className={inputClass}
+              value={qualification.alternatePhone}
+              onChange={(e) => updateQualification("alternatePhone", e.target.value)}
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">E-posta</label>
-            <input type="email" name="email" className={inputClass} />
+            <input
+              type="email"
+              name="email"
+              className={inputClass}
+              value={qualification.email}
+              onChange={(e) => updateQualification("email", e.target.value)}
+            />
           </div>
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Çatı Alanı (m²)</label>
-            <input type="number" step="0.01" name="roofAreaM2" className={inputClass} />
+            <input
+              type="number"
+              step="0.01"
+              name="roofAreaM2"
+              className={inputClass}
+              value={qualification.roofAreaM2}
+              onChange={(e) => updateQualification("roofAreaM2", e.target.value)}
+            />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Tahmini Kapasite (kWp)</label>
-            <input type="number" step="0.01" name="estimatedCapacityKwp" className={inputClass} />
+            <input
+              type="number"
+              step="0.01"
+              name="estimatedCapacityKwp"
+              className={inputClass}
+              value={qualification.estimatedCapacityKwp}
+              onChange={(e) => updateQualification("estimatedCapacityKwp", e.target.value)}
+            />
           </div>
 
-          <InterestField name="heatPumpInterest" label="Isı Pompası İlgisi" />
-          <InterestField name="poolInterest" label="Havuz İlgisi" />
-          <InterestField name="evInterest" label="Elektrikli Araç İlgisi" />
-          <InterestField name="batteryInterest" label="Batarya İlgisi" />
+          <InterestField
+            name="heatPumpInterest"
+            label="Isı Pompası İlgisi"
+            value={qualification.heatPumpInterest}
+            onChange={(v) => updateQualification("heatPumpInterest", v)}
+          />
+          <InterestField
+            name="poolInterest"
+            label="Havuz İlgisi"
+            value={qualification.poolInterest}
+            onChange={(v) => updateQualification("poolInterest", v)}
+          />
+          <InterestField
+            name="evInterest"
+            label="Elektrikli Araç İlgisi"
+            value={qualification.evInterest}
+            onChange={(v) => updateQualification("evInterest", v)}
+          />
+          <InterestField
+            name="batteryInterest"
+            label="Batarya İlgisi"
+            value={qualification.batteryInterest}
+            onChange={(v) => updateQualification("batteryInterest", v)}
+          />
 
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Rakip Teklifi</label>
-            <select name="competitorOfferStatus" defaultValue="" className={inputClass}>
+            <select
+              name="competitorOfferStatus"
+              value={qualification.competitorOfferStatus}
+              onChange={(e) => updateQualification("competitorOfferStatus", e.target.value)}
+              className={inputClass}
+            >
               {COMPETITOR_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -213,12 +306,23 @@ export function NewLeadForm() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-foreground">Rakip Teklifi Notu</label>
-            <input name="competitorOfferNote" className={inputClass} />
+            <input
+              name="competitorOfferNote"
+              className={inputClass}
+              value={qualification.competitorOfferNote}
+              onChange={(e) => updateQualification("competitorOfferNote", e.target.value)}
+            />
           </div>
 
           <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-3">
             <label className="text-sm font-medium text-foreground">Genel Not</label>
-            <textarea name="generalNotes" rows={3} className={inputClass} />
+            <textarea
+              name="generalNotes"
+              rows={3}
+              className={inputClass}
+              value={qualification.generalNotes}
+              onChange={(e) => updateQualification("generalNotes", e.target.value)}
+            />
           </div>
         </div>
       </div>

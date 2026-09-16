@@ -24,8 +24,8 @@ export function optionalNumber<E extends null | undefined>(emptyValue: E) {
     .trim()
     .transform((v): number | E => (v ? Number(v) : emptyValue))
     .refine(
-      (v) => (v as unknown) === emptyValue || (typeof v === "number" && Number.isFinite(v) && v > 0),
-      "Sayı pozitif olmalıdır."
+      (v) => (v as unknown) === emptyValue || (typeof v === "number" && Number.isFinite(v) && v >= 0),
+      "Sayı negatif olamaz."
     );
 }
 

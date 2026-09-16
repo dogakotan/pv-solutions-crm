@@ -23,13 +23,21 @@ type ExportRow = {
 };
 
 /**
- * Kalem satırları varsa birim fiyatlar KDV hariç kabul edilir (şablondaki
- * gibi TOPLAM/KDV/GENEL TOPLAM her zaman ayrı gösterilir). Kalem
- * girilmemiş tekliflerde tek satırlık bir özet satırı üretilir; bu
- * durumda vatIncluded bayrağı, mevcut "Tutar"ın KDV dahil mi hariç mi
- * olduğunu belirlemek için kullanılır.
+ * offer.amount + offer.vatIncluded, teklifin tek gerçek sözleşme değeri —
+ * offer-form.tsx'te kalem satırlarından tamamen bağımsız, serbest bir
+ * girdi (create_offer/revise_offer/record_sales_outcome da hep bunu
+ * kullanır, kalemlerden yeniden türetmez). Önceden kalem satırları varsa
+ * TOPLAM/KDV/GENEL TOPLAM kalem fiyatlarının toplamından yeniden
+ * hesaplanıyordu — bu, kalem birim fiyatları KDV dahil girildiğinde (ör.
+ * "KDV dahil" işaretli bir teklifte) KDV'nin ikinci kez eklenmesine yol
+ * açıyordu. Toplamlar artık her durumda amount/vatIncluded'dan türetiliyor;
+ * kalem satırları yalnızca bilgilendirici bir döküm.
  */
 function resolveRowsAndTotals(offer: OfferVersionForExport) {
+  const subtotal = offer.vatIncluded ? offer.amount / (1 + VAT_RATE) : offer.amount;
+  const vat = subtotal * VAT_RATE;
+  const grandTotal = subtotal + vat;
+
   if (offer.items.length > 0) {
     const rows: ExportRow[] = offer.items.map((item) => ({
       productCode: item.productCode ?? "",
@@ -37,16 +45,12 @@ function resolveRowsAndTotals(offer: OfferVersionForExport) {
       quantity: item.quantity,
       unitPrice: item.unitPrice,
     }));
-    const subtotal = rows.reduce((sum, row) => sum + row.quantity * row.unitPrice, 0);
-    const vat = subtotal * VAT_RATE;
-    return { rows, subtotal, vat, grandTotal: subtotal + vat };
+    return { rows, subtotal, vat, grandTotal };
   }
 
   const productName = offer.scopeSummary?.trim() || "Güneş Enerji Sistemi Kurulumu";
-  const rows: ExportRow[] = [{ productCode: "", productName, quantity: 1, unitPrice: offer.amount }];
-  const subtotal = offer.vatIncluded ? offer.amount / (1 + VAT_RATE) : offer.amount;
-  const vat = subtotal * VAT_RATE;
-  return { rows, subtotal, vat, grandTotal: subtotal + vat };
+  const rows: ExportRow[] = [{ productCode: "", productName, quantity: 1, unitPrice: subtotal }];
+  return { rows, subtotal, vat, grandTotal };
 }
 
 export async function buildOfferWorkbook(offer: OfferVersionForExport): Promise<ExcelJS.Workbook> {
@@ -176,7 +180,10 @@ export async function buildOfferWorkbook(offer: OfferVersionForExport): Promise<
   sheet.getCell(`B${row}`).value = offer.shippingTerms || "—";
   row += 2;
 
-  sheet.getCell(`A${row}`).value = `HESAP NUMARASI - ${offer.currency}: ${COMPANY_PROFILE.ibanTry}`;
+  // Şirket profilinde şu an yalnızca TRY IBAN'ı tanımlı — döviz cinsinden
+  // tekliflerde "HESAP NUMARASI - USD: <TRY IBAN>" gibi yanıltıcı bir etiket
+  // basmamak için hesap her zaman kendi para birimiyle (TRY) etiketleniyor.
+  sheet.getCell(`A${row}`).value = `HESAP NUMARASI - TRY: ${COMPANY_PROFILE.ibanTry}`;
   sheet.getCell(`A${row}`).font = { bold: true };
   row += 1;
   sheet.getCell(`A${row}`).value = COMPANY_PROFILE.bankName;

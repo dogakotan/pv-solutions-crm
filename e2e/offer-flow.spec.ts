@@ -8,6 +8,7 @@ import {
   findOfferIdByLeadId,
   findUserIdByEmail,
   findPartnerIdByEmail,
+  getOfferStatus,
   hasCleanupCredentials,
 } from "./helpers/cleanup";
 
@@ -146,6 +147,11 @@ test.describe("teklif kabul/red (respond_to_offer RPC)", () => {
       await employeePage.getByRole("button", { name: /Rev\.0/ }).click();
       await expect(employeePage.getByRole("button", { name: "Kabul Et" })).toHaveCount(0);
       await expect(employeePage.getByRole("button", { name: "Reddet" })).toHaveCount(0);
+      // İkinci tur inceleme: canDelete daha önce role bakmaksızın hep true'ydu
+      // — partnerler (ne employee ne admin) "Sil" butonunu hiç görmemeli,
+      // delete_offer_version RPC'si zaten yalnızca pv_admin/oluşturan sales'e
+      // izin veriyor.
+      await expect(employeePage.getByRole("button", { name: "Sil", exact: true })).toHaveCount(0);
       await employeeContext.close();
 
       const adminPartnerContext = await browser.newContext();
@@ -153,11 +159,63 @@ test.describe("teklif kabul/red (respond_to_offer RPC)", () => {
       await loginAs(adminPartnerPage, PARTNER_ADMIN_TEST_EMAIL!, PARTNER_ADMIN_TEST_PASSWORD!);
       await adminPartnerPage.goto(`/offers/${offerId}`);
       await adminPartnerPage.getByRole("button", { name: /Rev\.0/ }).click();
+      await expect(adminPartnerPage.getByRole("button", { name: "Sil", exact: true })).toHaveCount(0);
       await adminPartnerPage.getByRole("button", { name: "Kabul Et" }).click();
       await expect(adminPartnerPage.getByRole("button", { name: /Rev\.0.*Kabul Edildi/ })).toBeVisible({
         timeout: 10_000,
       });
       await adminPartnerContext.close();
+    } finally {
+      const leadId = await findLeadIdByCustomerName(customerName);
+      if (leadId) await deleteLead(leadId);
+    }
+  });
+
+  // İkinci tur inceleme: respond_to_offer reddi offer_versions'a yazıyordu
+  // ama offers.status hiç güncellemiyordu — reddedilen bir teklif
+  // offers-list-filters'ın "Reddedildi" filtresinde asla eşleşmiyor,
+  // offers-overview-tabs'ın "Açık" sayımında sonsuza dek yer almaya devam
+  // ediyordu. Bu test UI'dan reddedip DB'de offers.status'un gerçekten
+  // senkronize olduğunu doğruluyor.
+  test("partner_admin bir teklifi reddedince offers.status da senkronize olur", async ({ page, browser }) => {
+    const customerName = `E2E-Reject-${Date.now()}`;
+
+    try {
+      await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);
+      await createLeadViaUi(page, customerName);
+      const leadId = await findLeadIdByCustomerName(customerName);
+      expect(leadId).toBeTruthy();
+
+      const [adminId, partnerId] = await Promise.all([
+        findUserIdByEmail(TEST_EMAIL!),
+        findPartnerIdByEmail(PARTNER_ADMIN_TEST_EMAIL!),
+      ]);
+      expect(adminId).not.toBeNull();
+      expect(partnerId).not.toBeNull();
+      await createTestReferral({ leadId: leadId!, partnerId: partnerId!, referredBy: adminId! });
+
+      await page.goto(`/leads/${leadId}`);
+      await page.getByRole("button", { name: "Teklif Gönder" }).click();
+      await page.fill('input[name="amount"]', "10000");
+      await page.getByRole("button", { name: "Teklifi Gönder" }).click();
+      await expect(page.getByRole("button", { name: /Rev\.0/ })).toBeVisible({ timeout: 15_000 });
+
+      const offerId = await findOfferIdByLeadId(leadId!);
+      expect(offerId).toBeTruthy();
+      expect(await getOfferStatus(offerId!)).toBe("open");
+
+      const adminPartnerContext = await browser.newContext();
+      const adminPartnerPage = await adminPartnerContext.newPage();
+      await loginAs(adminPartnerPage, PARTNER_ADMIN_TEST_EMAIL!, PARTNER_ADMIN_TEST_PASSWORD!);
+      await adminPartnerPage.goto(`/offers/${offerId}`);
+      await adminPartnerPage.getByRole("button", { name: /Rev\.0/ }).click();
+      await adminPartnerPage.getByRole("button", { name: "Reddet" }).click();
+      await expect(adminPartnerPage.getByRole("button", { name: /Rev\.0.*Reddedildi/ })).toBeVisible({
+        timeout: 10_000,
+      });
+      await adminPartnerContext.close();
+
+      expect(await getOfferStatus(offerId!)).toBe("rejected");
     } finally {
       const leadId = await findLeadIdByCustomerName(customerName);
       if (leadId) await deleteLead(leadId);

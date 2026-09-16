@@ -151,6 +151,16 @@ export async function findOfferIdByLeadId(leadId: string): Promise<string | null
   return data?.id ?? null;
 }
 
+export async function getOfferStatus(offerId: string): Promise<string | null> {
+  const { data, error } = await adminClient()
+    .from("offers")
+    .select("status")
+    .eq("id", offerId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.status ?? null;
+}
+
 export async function findPartnerIdByEmail(email: string): Promise<string | null> {
   const { data, error } = await adminClient()
     .from("profiles")

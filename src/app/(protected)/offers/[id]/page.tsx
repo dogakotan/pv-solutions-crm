@@ -64,7 +64,7 @@ async function RevisionsCard({ offerId }: { offerId: string }) {
               key={version.id}
               version={version}
               excelHref={`/offers/${offerId}/versions/${version.id}/excel`}
-              canDelete
+              canDelete={dbRole === "pv_admin" || dbRole === "pv_sales"}
               deleteAction={deleteOfferVersion}
               canRespond={dbRole === "partner_admin"}
               respondAction={respondToOffer}

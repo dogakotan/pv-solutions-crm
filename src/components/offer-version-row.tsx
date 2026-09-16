@@ -1,8 +1,23 @@
 "use client";
 
 import { useRef } from "react";
+import { useFormStatus } from "react-dom";
 import { OfferVersionStatusBadge } from "@/components/offer-badges";
 import type { OfferVersionItem } from "@/lib/data/offers";
+
+// respondAction/deleteAction useActionState kullanmıyor (bu satır bileşeni
+// bir liste içinde tekrarlandığı için tek bir paylaşılan pending state'i
+// olamaz) — çift tıklamanın respond_to_offer'ı iki kez tetikleyip yinelenen
+// audit/bildirim kaydı oluşturmasını önlemek için her form kendi pending
+// durumunu useFormStatus ile okuyup submit sırasında kendini kapatıyor.
+function SubmitButton({ className, children }: { className: string; children: React.ReactNode }) {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" disabled={pending} className={`${className} disabled:opacity-50`}>
+      {children}
+    </button>
+  );
+}
 
 // Kabul edilmiş bir revizyon silinemez — bu, delete_offer_version RPC'sinin
 // de uyguladığı kısıt, burada yalnızca butonu göstermemek için tekrarlanıyor.
@@ -149,24 +164,18 @@ export function OfferVersionRow({
                     <input key={name} type="hidden" name={name} value={value} />
                   ))}
                   <input type="hidden" name="decision" value="accept" />
-                  <button
-                    type="submit"
-                    className="rounded-lg border border-green-200 px-3 py-1.5 text-xs text-green-700 hover:bg-green-50"
-                  >
+                  <SubmitButton className="rounded-lg border border-green-200 px-3 py-1.5 text-xs text-green-700 hover:bg-green-50">
                     Kabul Et
-                  </button>
+                  </SubmitButton>
                 </form>
                 <form action={respondAction}>
                   {Object.entries(hiddenFields).map(([name, value]) => (
                     <input key={name} type="hidden" name={name} value={value} />
                   ))}
                   <input type="hidden" name="decision" value="reject" />
-                  <button
-                    type="submit"
-                    className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
-                  >
+                  <SubmitButton className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
                     Reddet
-                  </button>
+                  </SubmitButton>
                 </form>
               </>
             )}
@@ -175,12 +184,9 @@ export function OfferVersionRow({
                 {Object.entries(hiddenFields).map(([name, value]) => (
                   <input key={name} type="hidden" name={name} value={value} />
                 ))}
-                <button
-                  type="submit"
-                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
-                >
+                <SubmitButton className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
                   Sil
-                </button>
+                </SubmitButton>
               </form>
             )}
           </div>

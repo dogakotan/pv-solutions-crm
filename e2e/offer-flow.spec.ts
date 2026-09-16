@@ -216,6 +216,20 @@ test.describe("teklif kabul/red (respond_to_offer RPC)", () => {
       await adminPartnerContext.close();
 
       expect(await getOfferStatus(offerId!)).toBe("rejected");
+
+      // Üçüncü tur inceleme: reddedilen bir teklif revize edilip yeniden
+      // gönderildiğinde offers.status hâlâ 'rejected'de takılı kalıyordu —
+      // yeni bir karar bekleyen teklif hâlâ "Reddedildi" gösteriliyordu.
+      // page, adminPartnerPage'in reddinden önceki durumu gösteriyor olabilir
+      // — reload ile güncel (rejected) durumu görmesi sağlanıyor.
+      await page.reload();
+      await expect(page.getByRole("button", { name: /Rev\.0.*Reddedildi/ })).toBeVisible({ timeout: 10_000 });
+      await page.getByRole("button", { name: "Revize Et" }).click();
+      await page.fill('input[name="amount"]', "12000");
+      await page.getByRole("button", { name: "Revizyonu Gönder" }).click();
+      await expect(page.getByRole("button", { name: /Rev\.1/ })).toBeVisible({ timeout: 15_000 });
+
+      expect(await getOfferStatus(offerId!)).toBe("open");
     } finally {
       const leadId = await findLeadIdByCustomerName(customerName);
       if (leadId) await deleteLead(leadId);

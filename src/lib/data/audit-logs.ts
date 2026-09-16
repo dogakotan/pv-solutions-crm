@@ -147,6 +147,7 @@ export const AUDIT_ACTIONS = [
   "set_partner_status",
   "set_role",
   "soft_delete",
+  "update_sales_outcome_fulfillment",
 ] as const;
 
 export const AUDIT_ACTION_LABELS: Record<string, string> = {

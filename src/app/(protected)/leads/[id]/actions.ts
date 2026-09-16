@@ -581,6 +581,42 @@ export async function recordSalesOutcome(
   return {};
 }
 
+export type FulfillmentState = {
+  error?: string;
+};
+
+/**
+ * Kazanılan bir satışın malzeme/ERP takibini günceller — yalnızca
+ * pv_admin veya lead sahibi pv_sales çağırabilir, ve yalnızca outcome
+ * 'won' ise (kontrol update_sales_outcome_fulfillment RPC'sinin içinde).
+ */
+export async function updateSalesOutcomeFulfillment(
+  _prevState: FulfillmentState,
+  formData: FormData
+): Promise<FulfillmentState> {
+  const leadId = String(formData.get("leadId") ?? "");
+  const materialPurchaseStatus = String(formData.get("materialPurchaseStatus") ?? "");
+  const erpOrderNumber = String(formData.get("erpOrderNumber") ?? "").trim();
+
+  if (!leadId || !["pending", "ordered", "delivered"].includes(materialPurchaseStatus)) {
+    return { error: "Geçersiz istek." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("update_sales_outcome_fulfillment", {
+    p_lead_id: leadId,
+    p_material_purchase_status: materialPurchaseStatus,
+    p_erp_order_number: erpOrderNumber || undefined,
+  });
+
+  if (error) {
+    return { error: "Malzeme durumu kaydedilemedi: " + error.message };
+  }
+
+  revalidatePath(`/leads/${leadId}`);
+  return {};
+}
+
 /**
  * 'lost' bir lead'i sabit bir yeniden-giriş noktasına ('contacted')
  * döndürür — yalnızca pv_admin veya lead sahibi pv_sales çağırabilir

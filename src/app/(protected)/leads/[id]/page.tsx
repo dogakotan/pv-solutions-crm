@@ -21,8 +21,10 @@ import { LeadStageBadge, LeadScoreBadge, ReferralStatusBadge, STAGE_STYLES } fro
 import { ActivityTypeBadge, ActivityVisibilityBadge } from "@/components/activity-badges";
 import { OfferVersionRow } from "@/components/offer-version-row";
 import { NEXT_STAGE, type LeadStage } from "@/types/lead";
+import { MATERIAL_PURCHASE_STATUS_LABELS } from "@/types/sales-outcome";
 import { ActivityForm } from "./activity-form";
 import { SalesOutcomeForm } from "./sales-outcome-form";
+import { SalesOutcomeFulfillmentForm } from "./sales-outcome-fulfillment-form";
 import { OfferForm } from "./offer-form";
 import { QualificationForm } from "./qualification-form";
 import { assignPartner, advanceLeadStage, deleteOfferVersion, softDeleteLead, reactivateLead } from "./actions";
@@ -484,6 +486,18 @@ async function SatisSonucuCard({
                     {salesOutcome.finalAmount?.toLocaleString("tr-TR")} {salesOutcome.currency}
                   </dd>
                 </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted">Malzeme Durumu</dt>
+                  <dd className="text-foreground">
+                    {MATERIAL_PURCHASE_STATUS_LABELS[salesOutcome.materialPurchaseStatus ?? "pending"]}
+                  </dd>
+                </div>
+                {salesOutcome.erpOrderNumber && (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-muted">ERP Sipariş No</dt>
+                    <dd className="text-foreground">{salesOutcome.erpOrderNumber}</dd>
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex justify-between gap-4">
@@ -515,6 +529,14 @@ async function SatisSonucuCard({
                 Yeniden Aç
               </button>
             </form>
+          )}
+
+          {salesOutcome.outcome === "won" && appRole !== "first_call" && (
+            <SalesOutcomeFulfillmentForm
+              leadId={leadId}
+              materialPurchaseStatus={salesOutcome.materialPurchaseStatus}
+              erpOrderNumber={salesOutcome.erpOrderNumber}
+            />
           )}
         </div>
       ) : appRole === "first_call" ? (

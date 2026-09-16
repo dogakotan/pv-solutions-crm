@@ -2060,6 +2060,40 @@ export type Database = {
         Args: { p_lead_id: string; p_reason?: string }
         Returns: undefined
       }
+      update_sales_outcome_fulfillment: {
+        Args: {
+          p_erp_order_number?: string
+          p_lead_id: string
+          p_material_purchase_status: string
+        }
+        Returns: {
+          accepted_offer_version_id: string | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          erp_order_number: string | null
+          final_amount: number | null
+          id: string
+          lead_id: string
+          lost_reason: string | null
+          lost_reason_detail: string | null
+          material_purchase_status: string | null
+          notes: string | null
+          outcome: string
+          partner_performance_impact: boolean | null
+          performance_impact_reason: string | null
+          referral_id: string | null
+          result_date: string
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "sales_outcomes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role:

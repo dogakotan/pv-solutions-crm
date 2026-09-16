@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
-import type { SalesOutcomeType } from "@/types/sales-outcome";
+import type { MaterialPurchaseStatus, SalesOutcomeType } from "@/types/sales-outcome";
 
 type TypedSupabaseClient = SupabaseClient<Database>;
 
@@ -15,6 +15,8 @@ export type SalesOutcomeItem = {
   notes: string | null;
   offerNo: string | null;
   revisionNo: number | null;
+  materialPurchaseStatus: MaterialPurchaseStatus | null;
+  erpOrderNumber: string | null;
 };
 
 type OfferVersionEmbed =
@@ -36,7 +38,7 @@ export async function getSalesOutcomeForLead(
   const { data, error } = await supabase
     .from("sales_outcomes")
     .select(
-      "id, outcome, final_amount, currency, lost_reason, result_date, notes, accepted_offer_version:offer_versions(revision_no, offers(offer_no))"
+      "id, outcome, final_amount, currency, lost_reason, result_date, notes, material_purchase_status, erp_order_number, accepted_offer_version:offer_versions(revision_no, offers(offer_no))"
     )
     .eq("lead_id", leadId)
     .maybeSingle();
@@ -56,6 +58,8 @@ export async function getSalesOutcomeForLead(
     notes: data.notes,
     offerNo,
     revisionNo,
+    materialPurchaseStatus: data.material_purchase_status as MaterialPurchaseStatus | null,
+    erpOrderNumber: data.erp_order_number,
   };
 }
 

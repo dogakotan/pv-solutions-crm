@@ -130,6 +130,72 @@ test.describe("Satışa toplu atama (assignManyToSales)", () => {
     }
   });
 
+  // Açık madde çözümü: assignManyToSales önceden N ayrı assign_lead_to_sales
+  // çağrısı yapıyordu (Promise.all) — kısmi başarısızlıkta zaten uygulanmış
+  // atamalar geri alınmıyordu. Artık tek bir atomik batch RPC'ye (
+  // assign_leads_to_sales_batch) taşındı. Bu test, seçilen iki lead'den biri
+  // gönderilmeden hemen önce (eşzamanlı bir işlemle) silinirse, HÂLÂ VAR OLAN
+  // geçerli lead'in de atanmamış kaldığını doğruluyor — eski N-ayrı-çağrı
+  // davranışında bu geçerli lead zaten atanmış olurdu.
+  test("seçilenlerden biri gönderilmeden hemen önce silinirse toplu atama atomik olarak geri alınır", async ({
+    page,
+  }) => {
+    const suffix = Date.now();
+    const name1 = `E2E Bulk Atomic A ${suffix}`;
+    const name2 = `E2E Bulk Atomic B ${suffix}`;
+
+    await loginAs(page, email!, password!);
+
+    const leadIds: string[] = [];
+    for (const name of [name1, name2]) {
+      await page.goto("/first-call/new-lead");
+      await page.fill('input[name="customerName"]', name);
+      await page.fill('input[name="phone"]', `05${Date.now().toString().slice(-9)}`);
+      await page.fill('input[name="city"]', "İstanbul");
+      await page
+        .locator("select")
+        .filter({ has: page.locator('option[value="inbound_call"]') })
+        .selectOption("inbound_call");
+      await page.getByRole("button", { name: "Lead Oluştur" }).click();
+      await page.waitForURL(/\/first-call\/lead-pool/, { timeout: 15_000 });
+      const id = await findLeadIdByCustomerName(name);
+      expect(id).not.toBeNull();
+      await setLeadScoreForTest(id!, "warm");
+      leadIds.push(id!);
+    }
+
+    try {
+      await page.goto("/first-call/assignments");
+
+      const row1 = page.locator("tbody tr").filter({ hasText: name1 });
+      const row2 = page.locator("tbody tr").filter({ hasText: name2 });
+      await expect(row1).toBeVisible();
+      await expect(row2).toBeVisible();
+
+      await row1.getByRole("checkbox").check();
+      await row2.getByRole("checkbox").check();
+      await expect(page.getByText("2 seçili")).toBeVisible();
+
+      const bulkSelect = page.locator("select").filter({ hasText: "Satış çalışanı seç" }).first();
+      const salesOptionValue = await bulkSelect.locator("option").nth(1).getAttribute("value");
+      await bulkSelect.selectOption(salesOptionValue!);
+
+      // Gönderilmeden hemen önce ikinci lead'i eşzamanlı bir silme işlemiyle simüle et.
+      await deleteLead(leadIds[1]);
+
+      await page.getByRole("button", { name: "Seçilenleri Ata" }).click();
+
+      await expect(page.getByText(/Toplu atama başarısız/)).toBeVisible({ timeout: 10_000 });
+
+      // Hâlâ var olan geçerli lead (name1) ATANMAMIŞ olarak kuyrukta kalmalı.
+      await page.reload();
+      await expect(page.locator("tbody tr").filter({ hasText: name1 })).toBeVisible();
+    } finally {
+      const id1 = await findLeadIdByCustomerName(name1);
+      if (id1) await deleteLead(id1);
+    }
+  });
+
   // Dördüncü tur inceleme: getLeadsNeedingSalesAssignment lead_score
   // filtresi taşımıyordu — hiç nitelendirilmemiş (aranmamış) bir lead de
   // satışa atama kuyruğunda görünüyor, first_call'ın nitelendirme
@@ -208,6 +274,60 @@ test.describe("Partnere toplu atama (assignManyToPartner)", () => {
       await expect(section.locator("tbody tr").filter({ hasText: name2 })).toHaveCount(0, { timeout: 10_000 });
     } finally {
       await Promise.all(leadIds.map((id) => deleteLead(id)));
+    }
+  });
+
+  // Açık madde çözümü: assignManyToPartner de assignManyToSales ile aynı
+  // atomiklik sorununu taşıyordu (bkz. yukarıdaki sales muadili). Aynı
+  // senaryo burada partner batch RPC'si (assign_leads_to_partner_batch) için.
+  test("seçilenlerden biri gönderilmeden hemen önce silinirse partnere toplu atama atomik olarak geri alınır", async ({
+    page,
+  }) => {
+    const adminId = await findUserIdByEmail(email!);
+    expect(adminId).not.toBeNull();
+
+    const suffix = Date.now();
+    const name1 = `E2E Partner Bulk Atomic A ${suffix}`;
+    const name2 = `E2E Partner Bulk Atomic B ${suffix}`;
+    const leadIds = await Promise.all(
+      [name1, name2].map((name) =>
+        createTestLead({ customerName: name, ownerId: adminId!, salesUserId: adminId!, stage: "referred" })
+      )
+    );
+
+    try {
+      await loginAs(page, email!, password!);
+      await page.goto("/admin/assignments");
+
+      const section = page.locator("section", { hasText: "Partnere Atama Bekleyen Leadler" });
+      const row1 = section.locator("tbody tr").filter({ hasText: name1 });
+      const row2 = section.locator("tbody tr").filter({ hasText: name2 });
+      await expect(row1).toBeVisible();
+      await expect(row2).toBeVisible();
+
+      await row1.getByRole("checkbox").check();
+      await row2.getByRole("checkbox").check();
+      await expect(section.getByText("2 seçili")).toBeVisible();
+
+      const bulkSelect = section.locator("select").filter({ hasText: "Partner seç" }).first();
+      const partnerOptionValue = await bulkSelect.locator("option").nth(1).getAttribute("value");
+      await bulkSelect.selectOption(partnerOptionValue!);
+
+      // Gönderilmeden hemen önce ikinci lead'i eşzamanlı bir silme işlemiyle simüle et.
+      await deleteLead(leadIds[1]);
+
+      await section.getByRole("button", { name: "Seçilenleri Ata" }).click();
+
+      await expect(section.getByText(/Toplu atama başarısız/)).toBeVisible({ timeout: 10_000 });
+
+      // Hâlâ var olan geçerli lead (name1) için referral OLUŞMAMIŞ olarak kuyrukta kalmalı.
+      await page.reload();
+      await expect(
+        page.locator("section", { hasText: "Partnere Atama Bekleyen Leadler" }).locator("tbody tr").filter({ hasText: name1 })
+      ).toBeVisible();
+    } finally {
+      const id1 = await findLeadIdByCustomerName(name1);
+      if (id1) await deleteLead(id1);
     }
   });
 });

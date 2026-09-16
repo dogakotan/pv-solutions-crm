@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { startTransition, useRef, useState } from "react";
 import Link from "next/link";
 import { LeadStageBadge, LeadScoreBadge } from "@/components/lead-badges";
 import type { AssignableLead } from "@/lib/data/assignments";
@@ -23,8 +23,8 @@ export function LeadAssignmentQueue({
 }: {
   leads: AssignableLead[];
   assignees: AssigneeOption[];
-  assignAction: (formData: FormData) => Promise<void>;
-  bulkAssignAction?: (leadIds: string[], assigneeId: string) => Promise<void>;
+  assignAction: (formData: FormData) => Promise<{ error?: string }>;
+  bulkAssignAction?: (leadIds: string[], assigneeId: string) => Promise<{ error?: string }>;
   selectName: string;
   selectPlaceholder: string;
   title: string;
@@ -61,31 +61,50 @@ export function LeadAssignmentQueue({
     if (el) el.value = best.id;
   }
 
-  async function handleRowAssign(leadId: string, formData: FormData) {
+  function handleRowAssign(leadId: string, formData: FormData) {
     setPendingLeadId(leadId);
     setRowError(null);
-    try {
-      await assignAction(formData);
-    } catch (err) {
-      setRowError({ id: leadId, message: err instanceof Error ? err.message : "Atama başarısız oldu." });
-    } finally {
-      setPendingLeadId(null);
-    }
+    // Server Action'ı bir <form action> prop'u yerine doğrudan bir event
+    // handler'dan çağırırken startTransition ile sarmak Next.js'in
+    // dokümante ettiği desen. Bundan bağımsız olarak, bu action'lar
+    // önceden hata durumunda throw ediyordu — cacheComponents: true
+    // altında, production build'de (dev'de değil) bu, gerçek hata mesajı
+    // yerine React'ın kendi iç hatasının ("Minified React error #441")
+    // görünmesine yol açıyordu. Hata artık throw yerine dönüş değeriyle
+    // taşınıyor, bu da bu üretim-özel React/Flight sorununu tamamen atlıyor.
+    startTransition(async () => {
+      try {
+        const result = await assignAction(formData);
+        if (result.error) {
+          setRowError({ id: leadId, message: result.error });
+        }
+      } catch (err) {
+        setRowError({ id: leadId, message: err instanceof Error ? err.message : "Atama başarısız oldu." });
+      } finally {
+        setPendingLeadId(null);
+      }
+    });
   }
 
-  async function handleBulkAssign() {
+  function handleBulkAssign() {
     if (!bulkAssignAction || selectedIds.size === 0 || !bulkAssigneeId) return;
     setBulkPending(true);
     setBulkError(null);
-    try {
-      await bulkAssignAction([...selectedIds], bulkAssigneeId);
-      setSelectedIds(new Set());
-      setBulkAssigneeId("");
-    } catch (err) {
-      setBulkError(err instanceof Error ? err.message : "Toplu atama başarısız oldu.");
-    } finally {
-      setBulkPending(false);
-    }
+    startTransition(async () => {
+      try {
+        const result = await bulkAssignAction([...selectedIds], bulkAssigneeId);
+        if (result.error) {
+          setBulkError(result.error);
+        } else {
+          setSelectedIds(new Set());
+          setBulkAssigneeId("");
+        }
+      } catch (err) {
+        setBulkError(err instanceof Error ? err.message : "Toplu atama başarısız oldu.");
+      } finally {
+        setBulkPending(false);
+      }
+    });
   }
 
   return (

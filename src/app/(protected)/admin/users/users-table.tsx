@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { startTransition, useMemo, useState } from "react";
 import type { StaffUser } from "@/lib/data/users";
 import type { DbRole } from "@/lib/auth/roles";
 
@@ -15,8 +15,8 @@ export function UsersTable({
 }: {
   users: StaffUser[];
   roleOptions: [DbRole, string][];
-  updateRoleAction: (formData: FormData) => Promise<void>;
-  updateActiveAction: (formData: FormData) => Promise<void>;
+  updateRoleAction: (formData: FormData) => Promise<{ error?: string }>;
+  updateActiveAction: (formData: FormData) => Promise<{ error?: string }>;
 }) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -35,28 +35,38 @@ export function UsersTable({
     });
   }, [users, search, roleFilter]);
 
-  async function handleRoleSubmit(userId: string, formData: FormData) {
+  function handleRoleSubmit(userId: string, formData: FormData) {
     setPendingId(userId);
     setRowError(null);
-    try {
-      await updateRoleAction(formData);
-    } catch (err) {
-      setRowError({ id: userId, message: err instanceof Error ? err.message : "Rol güncellenemedi." });
-    } finally {
-      setPendingId(null);
-    }
+    startTransition(async () => {
+      try {
+        const result = await updateRoleAction(formData);
+        if (result.error) {
+          setRowError({ id: userId, message: result.error });
+        }
+      } catch (err) {
+        setRowError({ id: userId, message: err instanceof Error ? err.message : "Rol güncellenemedi." });
+      } finally {
+        setPendingId(null);
+      }
+    });
   }
 
-  async function handleActiveSubmit(userId: string, formData: FormData) {
+  function handleActiveSubmit(userId: string, formData: FormData) {
     setPendingId(userId);
     setRowError(null);
-    try {
-      await updateActiveAction(formData);
-    } catch (err) {
-      setRowError({ id: userId, message: err instanceof Error ? err.message : "Durum güncellenemedi." });
-    } finally {
-      setPendingId(null);
-    }
+    startTransition(async () => {
+      try {
+        const result = await updateActiveAction(formData);
+        if (result.error) {
+          setRowError({ id: userId, message: result.error });
+        }
+      } catch (err) {
+        setRowError({ id: userId, message: err instanceof Error ? err.message : "Durum güncellenemedi." });
+      } finally {
+        setPendingId(null);
+      }
+    });
   }
 
   if (users.length === 0) {

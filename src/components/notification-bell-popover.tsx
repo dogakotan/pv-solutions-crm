@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, AlertTriangle } from "lucide-react";
 import type { NotificationItem } from "@/lib/data/notifications";
@@ -63,30 +63,42 @@ export function NotificationBellPopover() {
     };
   }, [open]);
 
-  async function handleMarkRead(id: string) {
+  function handleMarkRead(id: string) {
     setPendingId(id);
     setError(null);
-    try {
-      await markNotificationRead(id);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "İşlem başarısız oldu.");
-    } finally {
-      setPendingId(null);
-    }
+    startTransition(async () => {
+      try {
+        const result = await markNotificationRead(id);
+        if (result.error) {
+          setError(result.error);
+        } else {
+          await load();
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "İşlem başarısız oldu.");
+      } finally {
+        setPendingId(null);
+      }
+    });
   }
 
-  async function handleMarkAllRead() {
+  function handleMarkAllRead() {
     setMarkAllPending(true);
     setError(null);
-    try {
-      await markAllNotificationsRead();
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "İşlem başarısız oldu.");
-    } finally {
-      setMarkAllPending(false);
-    }
+    startTransition(async () => {
+      try {
+        const result = await markAllNotificationsRead();
+        if (result.error) {
+          setError(result.error);
+        } else {
+          await load();
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "İşlem başarısız oldu.");
+      } finally {
+        setMarkAllPending(false);
+      }
+    });
   }
 
   const { unreadCount, notifications, appRole } = summary;

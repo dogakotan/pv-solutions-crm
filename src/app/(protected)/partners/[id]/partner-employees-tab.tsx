@@ -1,6 +1,7 @@
 import type { PartnerEmployee } from "@/types/partner";
 import { AddEmployeeForm } from "./add-employee-form";
 import { setPartnerEmployeeActive } from "./employees-actions";
+import { EmployeeActiveToggleForm } from "./employee-active-toggle-form";
 
 const ROLE_LABELS = {
   partner_admin: "Partner Yönetici",
@@ -56,16 +57,11 @@ export function PartnerEmployeesTab({
                     </span>
                   </td>
                   <td className="py-2 text-right">
-                    <form action={toggleActive}>
-                      <input type="hidden" name="userId" value={employee.id} />
-                      <input type="hidden" name="isActive" value={(!employee.isActive).toString()} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-card-border px-2 py-1 text-xs hover:bg-background"
-                      >
-                        {employee.isActive ? "Pasifleştir" : "Aktifleştir"}
-                      </button>
-                    </form>
+                    <EmployeeActiveToggleForm
+                      action={toggleActive}
+                      userId={employee.id}
+                      isActive={employee.isActive}
+                    />
                   </td>
                 </tr>
               ))}

@@ -82,19 +82,24 @@ export async function createPartnerEmployee(
  * çalışanı/yöneticisi için ayrı bir RPC gerekmiyordu, eksik olan
  * yalnızca bu UI kontrolüydü.
  */
-export async function setPartnerEmployeeActive(partnerId: string, formData: FormData) {
+export async function setPartnerEmployeeActive(
+  partnerId: string,
+  _prevState: { error?: string },
+  formData: FormData
+): Promise<{ error?: string }> {
   await requireRole(["admin"]);
 
   const userId = String(formData.get("userId") ?? "");
   const isActive = formData.get("isActive") === "true";
 
   if (!userId) {
-    throw new Error("Geçersiz istek.");
+    return { error: "Geçersiz istek." };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_user_active", { p_user_id: userId, p_is_active: isActive });
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   revalidatePath(`/partners/${partnerId}`);
+  return {};
 }

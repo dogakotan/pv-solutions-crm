@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
 
 export function MarkReadButton({
   action,
@@ -8,7 +8,7 @@ export function MarkReadButton({
   pendingLabel,
   className,
 }: {
-  action: () => Promise<void>;
+  action: () => Promise<{ error?: string }>;
   label: string;
   pendingLabel: string;
   className: string;
@@ -16,16 +16,21 @@ export function MarkReadButton({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleClick() {
+  function handleClick() {
     setPending(true);
     setError(null);
-    try {
-      await action();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "İşlem başarısız oldu.");
-    } finally {
-      setPending(false);
-    }
+    startTransition(async () => {
+      try {
+        const result = await action();
+        if (result.error) {
+          setError(result.error);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "İşlem başarısız oldu.");
+      } finally {
+        setPending(false);
+      }
+    });
   }
 
   return (

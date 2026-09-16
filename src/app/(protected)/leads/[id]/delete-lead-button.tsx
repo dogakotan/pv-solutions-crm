@@ -1,15 +1,17 @@
 "use client";
 
-import { useRef } from "react";
+import { useActionState, useRef } from "react";
+import type { ActionFormState } from "./actions";
 
 export function DeleteLeadButton({
   leadId,
   deleteAction,
 }: {
   leadId: string;
-  deleteAction: (formData: FormData) => void | Promise<void>;
+  deleteAction: (prevState: ActionFormState, formData: FormData) => Promise<ActionFormState>;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [state, formAction, pending] = useActionState(deleteAction, {});
 
   return (
     <>
@@ -28,7 +30,7 @@ export function DeleteLeadButton({
         }}
         className="fixed inset-0 m-auto max-h-[85vh] w-full max-w-md overflow-y-auto rounded-2xl border border-card-border bg-card p-0 text-foreground backdrop:bg-black/40"
       >
-        <form action={deleteAction} className="flex flex-col gap-4 p-6">
+        <form action={formAction} className="flex flex-col gap-4 p-6">
           <input type="hidden" name="leadId" value={leadId} />
           <div>
             <h3 className="text-base font-semibold text-foreground">Lead&apos;i sil</h3>
@@ -45,6 +47,7 @@ export function DeleteLeadButton({
               className="rounded-lg border border-card-border px-3 py-2 text-sm outline-none focus:border-brand focus:ring-1 focus:ring-brand"
             />
           </div>
+          {state.error && <p className="text-sm text-red-600">{state.error}</p>}
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
@@ -55,9 +58,10 @@ export function DeleteLeadButton({
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+              disabled={pending}
+              className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
             >
-              Evet, sil
+              {pending ? "Siliniyor..." : "Evet, sil"}
             </button>
           </div>
         </form>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { startTransition, useMemo, useState } from "react";
 import type { PartnerReferralListItem } from "@/lib/data/leads";
 import { LeadStageBadge, ReferralStatusBadge } from "@/components/lead-badges";
 import type { PartnerReferralStatus } from "@/types/lead";
@@ -23,8 +23,8 @@ export function ReferralsTable({
   rejectAction,
 }: {
   referrals: PartnerReferralListItem[];
-  acceptAction: (formData: FormData) => Promise<void>;
-  rejectAction: (formData: FormData) => Promise<void>;
+  acceptAction: (formData: FormData) => Promise<{ error?: string }>;
+  rejectAction: (formData: FormData) => Promise<{ error?: string }>;
 }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<PartnerReferralStatus | "all">("all");
@@ -45,21 +45,26 @@ export function ReferralsTable({
     });
   }, [referrals, search, statusFilter]);
 
-  async function handleAccept(referralId: string) {
+  function handleAccept(referralId: string) {
     setPendingId(referralId);
     setRowError(null);
-    try {
-      const fd = new FormData();
-      fd.set("referralId", referralId);
-      await acceptAction(fd);
-    } catch (err) {
-      setRowError({ id: referralId, message: err instanceof Error ? err.message : "İşlem başarısız oldu." });
-    } finally {
-      setPendingId(null);
-    }
+    startTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("referralId", referralId);
+        const result = await acceptAction(fd);
+        if (result.error) {
+          setRowError({ id: referralId, message: result.error });
+        }
+      } catch (err) {
+        setRowError({ id: referralId, message: err instanceof Error ? err.message : "İşlem başarısız oldu." });
+      } finally {
+        setPendingId(null);
+      }
+    });
   }
 
-  async function handleReject(referralId: string) {
+  function handleReject(referralId: string) {
     const reason = (reasonDrafts[referralId] ?? "").trim();
     if (!reason) {
       setRowError({ id: referralId, message: "Ret için bir gerekçe girilmelidir." });
@@ -67,16 +72,21 @@ export function ReferralsTable({
     }
     setPendingId(referralId);
     setRowError(null);
-    try {
-      const fd = new FormData();
-      fd.set("referralId", referralId);
-      fd.set("reason", reason);
-      await rejectAction(fd);
-    } catch (err) {
-      setRowError({ id: referralId, message: err instanceof Error ? err.message : "İşlem başarısız oldu." });
-    } finally {
-      setPendingId(null);
-    }
+    startTransition(async () => {
+      try {
+        const fd = new FormData();
+        fd.set("referralId", referralId);
+        fd.set("reason", reason);
+        const result = await rejectAction(fd);
+        if (result.error) {
+          setRowError({ id: referralId, message: result.error });
+        }
+      } catch (err) {
+        setRowError({ id: referralId, message: err instanceof Error ? err.message : "İşlem başarısız oldu." });
+      } finally {
+        setPendingId(null);
+      }
+    });
   }
 
   if (referrals.length === 0) {

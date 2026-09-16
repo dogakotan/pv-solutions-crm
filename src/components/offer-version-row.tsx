@@ -1,17 +1,23 @@
 "use client";
 
-import { useRef } from "react";
-import { useFormStatus } from "react-dom";
+import { useActionState, useRef } from "react";
 import { OfferVersionStatusBadge } from "@/components/offer-badges";
 import type { OfferVersionItem } from "@/lib/data/offers";
+import type { ActionFormState } from "@/app/(protected)/leads/[id]/actions";
 
-// respondAction/deleteAction useActionState kullanmıyor (bu satır bileşeni
-// bir liste içinde tekrarlandığı için tek bir paylaşılan pending state'i
-// olamaz) — çift tıklamanın respond_to_offer'ı iki kez tetikleyip yinelenen
-// audit/bildirim kaydı oluşturmasını önlemek için her form kendi pending
-// durumunu useFormStatus ile okuyup submit sırasında kendini kapatıyor.
-function SubmitButton({ className, children }: { className: string; children: React.ReactNode }) {
-  const { pending } = useFormStatus();
+type RowAction = (prevState: ActionFormState, formData: FormData) => Promise<ActionFormState>;
+
+const noopAction: RowAction = async () => ({});
+
+function SubmitButton({
+  pending,
+  className,
+  children,
+}: {
+  pending: boolean;
+  className: string;
+  children: React.ReactNode;
+}) {
   return (
     <button type="submit" disabled={pending} className={`${className} disabled:opacity-50`}>
       {children}
@@ -35,12 +41,18 @@ export function OfferVersionRow({
   version: OfferVersionItem;
   excelHref: string;
   canDelete: boolean;
-  deleteAction: (formData: FormData) => void | Promise<void>;
+  deleteAction: RowAction;
   canRespond?: boolean;
-  respondAction?: (formData: FormData) => void | Promise<void>;
+  respondAction?: RowAction;
   hiddenFields: Record<string, string>;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  // İki ayrı useActionState — accept/reject'in pending/hata durumu delete'i
+  // (veya tam tersini) etkilemesin diye. Kabul/Reddet aynı state'i paylaşıyor
+  // çünkü ikisi de respond_to_offer'ı çağırıyor ve tek seferde yalnızca biri
+  // gönderilebilir (çift tıklama koruması RPC'nin kendi atomik UPDATE'inde).
+  const [respondState, respondFormAction, respondPending] = useActionState(respondAction ?? noopAction, {});
+  const [deleteState, deleteFormAction, deletePending] = useActionState(deleteAction, {});
   const showDeleteButton = canDelete && !NON_DELETABLE_STATUSES.has(version.status);
   const showRespondButtons = canRespond && respondAction && version.status === "sent";
 
@@ -158,35 +170,48 @@ export function OfferVersionRow({
               Excel İndir
             </a>
             {showRespondButtons && (
-              <>
-                <form action={respondAction}>
-                  {Object.entries(hiddenFields).map(([name, value]) => (
-                    <input key={name} type="hidden" name={name} value={value} />
-                  ))}
-                  <input type="hidden" name="decision" value="accept" />
-                  <SubmitButton className="rounded-lg border border-green-200 px-3 py-1.5 text-xs text-green-700 hover:bg-green-50">
-                    Kabul Et
-                  </SubmitButton>
-                </form>
-                <form action={respondAction}>
-                  {Object.entries(hiddenFields).map(([name, value]) => (
-                    <input key={name} type="hidden" name={name} value={value} />
-                  ))}
-                  <input type="hidden" name="decision" value="reject" />
-                  <SubmitButton className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
-                    Reddet
-                  </SubmitButton>
-                </form>
-              </>
+              <div className="flex flex-col items-start gap-1">
+                <div className="flex items-center gap-2">
+                  <form action={respondFormAction}>
+                    {Object.entries(hiddenFields).map(([name, value]) => (
+                      <input key={name} type="hidden" name={name} value={value} />
+                    ))}
+                    <input type="hidden" name="decision" value="accept" />
+                    <SubmitButton
+                      pending={respondPending}
+                      className="rounded-lg border border-green-200 px-3 py-1.5 text-xs text-green-700 hover:bg-green-50"
+                    >
+                      Kabul Et
+                    </SubmitButton>
+                  </form>
+                  <form action={respondFormAction}>
+                    {Object.entries(hiddenFields).map(([name, value]) => (
+                      <input key={name} type="hidden" name={name} value={value} />
+                    ))}
+                    <input type="hidden" name="decision" value="reject" />
+                    <SubmitButton
+                      pending={respondPending}
+                      className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                    >
+                      Reddet
+                    </SubmitButton>
+                  </form>
+                </div>
+                {respondState.error && <p className="text-xs text-red-600">{respondState.error}</p>}
+              </div>
             )}
             {showDeleteButton && (
-              <form action={deleteAction}>
+              <form action={deleteFormAction} className="flex flex-col items-start gap-1">
                 {Object.entries(hiddenFields).map(([name, value]) => (
                   <input key={name} type="hidden" name={name} value={value} />
                 ))}
-                <SubmitButton className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
+                <SubmitButton
+                  pending={deletePending}
+                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                >
                   Sil
                 </SubmitButton>
+                {deleteState.error && <p className="text-xs text-red-600">{deleteState.error}</p>}
               </form>
             )}
           </div>

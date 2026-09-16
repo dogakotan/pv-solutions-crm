@@ -20,6 +20,7 @@ import { getRecommendedPartnersForLead } from "@/lib/data/partners";
 import { LeadStageBadge, LeadScoreBadge, ReferralStatusBadge, STAGE_STYLES } from "@/components/lead-badges";
 import { ActivityTypeBadge, ActivityVisibilityBadge } from "@/components/activity-badges";
 import { OfferVersionRow } from "@/components/offer-version-row";
+import { ActionForm } from "@/components/action-form";
 import { NEXT_STAGE, type LeadStage } from "@/types/lead";
 import { MATERIAL_PURCHASE_STATUS_LABELS } from "@/types/sales-outcome";
 import { ActivityForm } from "./activity-form";
@@ -108,16 +109,12 @@ export default async function LeadDetailPage({
           <LeadStageBadge stage={lead.stage} />
           <LeadScoreBadge score={lead.leadScore} />
           {canAdvanceStage && nextStage && (
-            <form action={advanceLeadStage}>
-              <input type="hidden" name="leadId" value={lead.id} />
-              <input type="hidden" name="currentStage" value={lead.stage} />
-              <button
-                type="submit"
-                className="whitespace-nowrap rounded-lg border border-card-border px-3 py-1.5 text-xs hover:bg-background"
-              >
-                İlerlet: {STAGE_STYLES[nextStage].label} →
-              </button>
-            </form>
+            <ActionForm
+              action={advanceLeadStage}
+              hiddenFields={{ leadId: lead.id, currentStage: lead.stage }}
+              label={`İlerlet: ${STAGE_STYLES[nextStage].label} →`}
+              className="whitespace-nowrap rounded-lg border border-card-border px-3 py-1.5 text-xs hover:bg-background"
+            />
           )}
           {appRole === "admin" && <DeleteLeadButton leadId={lead.id} deleteAction={softDeleteLead} />}
         </div>
@@ -311,16 +308,12 @@ async function PartnerAtamaCard({
                   </td>
                   <td className="py-3 pr-3 text-foreground">{partner.rating.toFixed(1)}/5</td>
                   <td className="py-3 pr-3">
-                    <form action={assignPartner}>
-                      <input type="hidden" name="leadId" value={leadId} />
-                      <input type="hidden" name="partnerId" value={partner.id} />
-                      <button
-                        type="submit"
-                        className="rounded-lg border border-card-border px-3 py-1.5 text-xs hover:bg-background"
-                      >
-                        Ata
-                      </button>
-                    </form>
+                    <ActionForm
+                      action={assignPartner}
+                      hiddenFields={{ leadId, partnerId: partner.id }}
+                      label="Ata"
+                      className="rounded-lg border border-card-border px-3 py-1.5 text-xs hover:bg-background"
+                    />
                   </td>
                 </tr>
               ))}
@@ -522,15 +515,12 @@ async function SatisSonucuCard({
           </dl>
 
           {salesOutcome.outcome === "lost" && appRole !== "first_call" && (
-            <form action={reactivateLead}>
-              <input type="hidden" name="leadId" value={leadId} />
-              <button
-                type="submit"
-                className="w-fit rounded-lg border border-card-border px-3 py-1.5 text-xs hover:bg-background"
-              >
-                Yeniden Aç
-              </button>
-            </form>
+            <ActionForm
+              action={reactivateLead}
+              hiddenFields={{ leadId }}
+              label="Yeniden Aç"
+              className="w-fit rounded-lg border border-card-border px-3 py-1.5 text-xs hover:bg-background"
+            />
           )}
 
           {salesOutcome.outcome === "won" && appRole !== "first_call" && (

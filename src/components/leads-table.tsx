@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { startTransition, useMemo, useState } from "react";
 import Link from "next/link";
 import type { LeadListItem } from "@/lib/data/leads";
 import type { LeadStage } from "@/types/lead";
@@ -16,24 +16,29 @@ export function LeadsTable({
 }: {
   leads: LeadListItem[];
   emptyMessage?: string;
-  onClaim?: (leadId: string) => void | Promise<void>;
+  onClaim?: (leadId: string) => Promise<{ error?: string }>;
 }) {
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<LeadStage | "all">("all");
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [claimError, setClaimError] = useState<{ id: string; message: string } | null>(null);
 
-  async function handleClaim(leadId: string) {
+  function handleClaim(leadId: string) {
     if (!onClaim) return;
     setClaimingId(leadId);
     setClaimError(null);
-    try {
-      await onClaim(leadId);
-    } catch (err) {
-      setClaimError({ id: leadId, message: err instanceof Error ? err.message : "Lead atanamadı." });
-    } finally {
-      setClaimingId(null);
-    }
+    startTransition(async () => {
+      try {
+        const result = await onClaim(leadId);
+        if (result.error) {
+          setClaimError({ id: leadId, message: result.error });
+        }
+      } catch (err) {
+        setClaimError({ id: leadId, message: err instanceof Error ? err.message : "Lead atanamadı." });
+      } finally {
+        setClaimingId(null);
+      }
+    });
   }
 
   const filtered = useMemo(() => {

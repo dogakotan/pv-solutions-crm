@@ -187,12 +187,14 @@ export async function qualifyLead(
   return {};
 }
 
-export async function assignPartner(formData: FormData) {
+export type ActionFormState = { error?: string };
+
+export async function assignPartner(_prevState: ActionFormState, formData: FormData): Promise<ActionFormState> {
   const leadId = String(formData.get("leadId") ?? "");
   const partnerId = String(formData.get("partnerId") ?? "");
 
   if (!leadId || !partnerId) {
-    throw new Error("Partner seçilmedi");
+    return { error: "Partner seçilmedi" };
   }
 
   const supabase = await createClient();
@@ -200,10 +202,11 @@ export async function assignPartner(formData: FormData) {
     p_lead_id: leadId,
     p_partner_id: partnerId,
   });
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/sales/my-leads");
+  return {};
 }
 
 /**
@@ -214,22 +217,23 @@ export async function assignPartner(formData: FormData) {
  * INVOKER) update + write_audit_log'u tek çağrıda sarmalıyor — bkz.
  * add_missing_lead_audit_logs migration'ı.
  */
-export async function advanceLeadStage(formData: FormData) {
+export async function advanceLeadStage(_prevState: ActionFormState, formData: FormData): Promise<ActionFormState> {
   const leadId = String(formData.get("leadId") ?? "");
   const currentStage = String(formData.get("currentStage") ?? "") as LeadStage;
   const nextStage = NEXT_STAGE[currentStage];
 
   if (!leadId || !nextStage) {
-    throw new Error("Geçersiz istek.");
+    return { error: "Geçersiz istek." };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("advance_lead_stage", { p_lead_id: leadId, p_next_stage: nextStage });
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/sales/my-leads");
   revalidatePath("/leads");
+  return {};
 }
 
 export type OfferFormState = {
@@ -449,23 +453,27 @@ export async function reviseOffer(
  * pv_admin veya revizyonu oluşturan kullanıcı silebilir) RPC'nin
  * içinde yapılıyor — bkz. delete_offer_version migration'ı.
  */
-export async function deleteOfferVersion(formData: FormData) {
+export async function deleteOfferVersion(
+  _prevState: ActionFormState,
+  formData: FormData
+): Promise<ActionFormState> {
   const leadId = String(formData.get("leadId") ?? "").trim();
   const offerId = String(formData.get("offerId") ?? "").trim();
   const offerVersionId = String(formData.get("offerVersionId") ?? "");
 
   if (!offerVersionId) {
-    throw new Error("Geçersiz istek.");
+    return { error: "Geçersiz istek." };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("delete_offer_version", { p_offer_version_id: offerVersionId });
 
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   if (leadId) revalidatePath(`/leads/${leadId}`);
   if (offerId) revalidatePath(`/offers/${offerId}`);
   revalidatePath("/offers");
+  return {};
 }
 
 /**
@@ -474,13 +482,13 @@ export async function deleteOfferVersion(formData: FormData) {
  * içinde yapılıyor, bkz. respond_to_offer_rpc migration'ı. Nihai satış
  * sonucuna (won/lost) dokunmuyor, bu hâlâ ayrı bir adım.
  */
-export async function respondToOffer(formData: FormData) {
+export async function respondToOffer(_prevState: ActionFormState, formData: FormData): Promise<ActionFormState> {
   const offerId = String(formData.get("offerId") ?? "").trim();
   const offerVersionId = String(formData.get("offerVersionId") ?? "");
   const decision = String(formData.get("decision") ?? "");
 
   if (!offerVersionId || (decision !== "accept" && decision !== "reject")) {
-    throw new Error("Geçersiz istek.");
+    return { error: "Geçersiz istek." };
   }
 
   const supabase = await createClient();
@@ -489,10 +497,11 @@ export async function respondToOffer(formData: FormData) {
     p_decision: decision,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   if (offerId) revalidatePath(`/offers/${offerId}`);
   revalidatePath("/offers");
+  return {};
 }
 
 /**
@@ -501,12 +510,12 @@ export async function respondToOffer(formData: FormData) {
  * audit_logs'a yazar (bkz. lead_protected_columns_and_assignment_rpc
  * migration'ı). Buton yalnızca admin'e gösterilir.
  */
-export async function softDeleteLead(formData: FormData) {
+export async function softDeleteLead(_prevState: ActionFormState, formData: FormData): Promise<ActionFormState> {
   const leadId = String(formData.get("leadId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
 
   if (!leadId) {
-    throw new Error("Geçersiz istek.");
+    return { error: "Geçersiz istek." };
   }
 
   const supabase = await createClient();
@@ -515,7 +524,7 @@ export async function softDeleteLead(formData: FormData) {
     p_reason: reason || undefined,
   });
 
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   revalidatePath("/leads");
   redirect("/leads");
@@ -632,18 +641,19 @@ export async function updateSalesOutcomeFulfillment(
  * döndürür — yalnızca pv_admin veya lead sahibi pv_sales çağırabilir
  * (kontrol reactivate_lead RPC'sinin içinde).
  */
-export async function reactivateLead(formData: FormData) {
+export async function reactivateLead(_prevState: ActionFormState, formData: FormData): Promise<ActionFormState> {
   const leadId = String(formData.get("leadId") ?? "");
 
   if (!leadId) {
-    throw new Error("Geçersiz istek.");
+    return { error: "Geçersiz istek." };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("reactivate_lead", { p_lead_id: leadId });
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   revalidatePath(`/leads/${leadId}`);
   revalidatePath("/sales/my-leads");
   revalidatePath("/leads");
+  return {};
 }

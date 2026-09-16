@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-export async function acceptReferral(formData: FormData) {
+export async function acceptReferral(formData: FormData): Promise<{ error?: string }> {
   const referralId = String(formData.get("referralId"));
 
   const supabase = await createClient();
@@ -11,17 +11,18 @@ export async function acceptReferral(formData: FormData) {
     p_referral_id: referralId,
     p_decision: "accept",
   });
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   revalidatePath("/partner/assigned-leads");
+  return {};
 }
 
-export async function rejectReferral(formData: FormData) {
+export async function rejectReferral(formData: FormData): Promise<{ error?: string }> {
   const referralId = String(formData.get("referralId"));
   const reason = String(formData.get("reason") ?? "").trim();
 
   if (!reason) {
-    throw new Error("Ret için bir gerekçe girilmelidir");
+    return { error: "Ret için bir gerekçe girilmelidir" };
   }
 
   const supabase = await createClient();
@@ -30,7 +31,8 @@ export async function rejectReferral(formData: FormData) {
     p_decision: "reject",
     p_rejection_reason: reason,
   });
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   revalidatePath("/partner/assigned-leads");
+  return {};
 }

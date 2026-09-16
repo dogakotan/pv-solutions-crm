@@ -11,30 +11,32 @@ const DB_ROLES: DbRole[] = ["pv_admin", "pv_sales", "first_call", "partner_admin
 const STAFF_ROLES = ["pv_admin", "pv_sales", "first_call"] as const;
 type StaffRole = (typeof STAFF_ROLES)[number];
 
-export async function updateUserRole(formData: FormData) {
+export async function updateUserRole(formData: FormData): Promise<{ error?: string }> {
   const userId = String(formData.get("userId"));
   const role = String(formData.get("role"));
 
   if (!DB_ROLES.includes(role as DbRole)) {
-    throw new Error("Geçersiz rol");
+    return { error: "Geçersiz rol" };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_user_role", { p_user_id: userId, p_role: role as DbRole });
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   revalidatePath("/admin/users");
+  return {};
 }
 
-export async function updateUserActive(formData: FormData) {
+export async function updateUserActive(formData: FormData): Promise<{ error?: string }> {
   const userId = String(formData.get("userId"));
   const isActive = formData.get("isActive") === "true";
 
   const supabase = await createClient();
   const { error } = await supabase.rpc("set_user_active", { p_user_id: userId, p_is_active: isActive });
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
 
   revalidatePath("/admin/users");
+  return {};
 }
 
 export type CreateStaffUserState = {

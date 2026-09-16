@@ -47,30 +47,6 @@ function extractLead(embed: LeadEmbed) {
   return Array.isArray(embed) ? (embed[0] ?? null) : embed;
 }
 
-export async function getVisibleOffers(supabase: TypedSupabaseClient, limit = 50): Promise<OfferListItem[]> {
-  const { data, error } = await supabase
-    .from("offers")
-    .select("id, offer_no, status, created_at, leads(lead_no, customer_name)")
-    .is("leads.deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-
-  return (data ?? []).flatMap((row) => {
-    const lead = extractLead(row.leads as LeadEmbed);
-    if (!lead) return [];
-    return [{
-      id: row.id,
-      offerNo: row.offer_no,
-      status: row.status as OfferStatus,
-      createdAt: row.created_at,
-      leadNo: lead.lead_no,
-      customerName: lead.customer_name,
-    }];
-  });
-}
-
 export type OfferOverviewItem = OfferListItem & {
   amount: number | null;
   currency: string | null;
@@ -78,10 +54,9 @@ export type OfferOverviewItem = OfferListItem & {
 };
 
 /**
- * Teklifler > Genel/Teklif Listesi sayfaları için — her teklife en son
- * revizyonun tutarı ve geçerlilik tarihini ("sonraki aksiyon tarihi"
- * olarak kullanılıyor) ekler. getVisibleOffers/Excel export akışına
- * dokunmadan ayrı bir RPC ile tek sorguda çekiliyor.
+ * Teklifler > Genel/Teklif Listesi sayfaları ve Excel export'u için — her
+ * teklife en son revizyonun tutarı ve geçerlilik tarihini ("sonraki aksiyon
+ * tarihi" olarak kullanılıyor) ekler; tek sorguda bir RPC ile çekiliyor.
  */
 export async function getOffersOverview(supabase: TypedSupabaseClient, limit = 500): Promise<OfferOverviewItem[]> {
   const { data, error } = await supabase.rpc("get_offers_overview", { p_limit: limit });

@@ -559,6 +559,11 @@ export async function recordSalesOutcome(
     return { error: "Kaybedilen satış için bir gerekçe girilmelidir." };
   }
 
+  const userId = await getVerifiedUserId();
+  if (!userId) {
+    return { error: "Oturum bulunamadı." };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.rpc("record_sales_outcome", {
     p_lead_id: leadId,
@@ -600,6 +605,11 @@ export async function updateSalesOutcomeFulfillment(
 
   if (!leadId || !["pending", "ordered", "delivered"].includes(materialPurchaseStatus)) {
     return { error: "Geçersiz istek." };
+  }
+
+  const userId = await getVerifiedUserId();
+  if (!userId) {
+    return { error: "Oturum bulunamadı." };
   }
 
   const supabase = await createClient();

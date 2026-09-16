@@ -43,7 +43,7 @@ export function PartnerEmployeesTab({
                 <tr key={employee.id} className="border-b border-card-border last:border-0">
                   <td className="py-2 text-foreground">{employee.fullName}</td>
                   <td className="py-2 text-muted">{ROLE_LABELS[employee.role]}</td>
-                  <td className="py-2 text-muted">{employee.phone}</td>
+                  <td className="py-2 text-muted">{employee.phone || "—"}</td>
                   <td className="py-2">
                     <span
                       className={

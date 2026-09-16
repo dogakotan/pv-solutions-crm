@@ -48,9 +48,18 @@ export function OffersListFilters({ offers }: { offers: OfferOverviewItem[] }) {
     });
   }, [offers, search, statusFilter, dateFrom, dateTo, amountMin, amountMax]);
 
+  // Excel export, ekrandaki tabloyla aynı filtreleri görsün diye burada
+  // uygulanan arama/durum/tarih/tutar kriterlerinin tamamı query param
+  // olarak forward ediliyor — önceden yalnızca q/status gidiyordu, tarih ve
+  // tutar filtreleriyle daraltılmış bir görünümü export etmek beklenenden
+  // farklı (filtrelenmemiş) bir dosya indiriyordu.
   const exportParams = new URLSearchParams();
   if (search.trim()) exportParams.set("q", search.trim());
   if (statusFilter !== "all") exportParams.set("status", statusFilter);
+  if (dateFrom) exportParams.set("from", dateFrom);
+  if (dateTo) exportParams.set("to", dateTo);
+  if (amountMin.trim()) exportParams.set("amountMin", amountMin.trim());
+  if (amountMax.trim()) exportParams.set("amountMax", amountMax.trim());
   const exportHref = `/offers/excel${exportParams.toString() ? `?${exportParams.toString()}` : ""}`;
 
   return (

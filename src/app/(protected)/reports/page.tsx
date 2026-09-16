@@ -10,6 +10,7 @@ import {
   getMonthlyWonAmount,
   getOverdueFollowUpCount,
 } from "@/lib/data/reports";
+import { computeSuggestedPartnerRating } from "@/lib/partner-rating";
 import { LeadStageBadge } from "@/components/lead-badges";
 import { CardGridSkeleton, CardSkeleton } from "@/components/skeletons";
 import { SetHeaderContent } from "@/components/page-header-slot";
@@ -232,16 +233,20 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
           {partnerPerformance.length > 0 && (
             <ExportCsvButton
               filename="partner-bazli-performans.csv"
-              headers={["Partner", "Manuel Puan", "Yönlendirme", "Kabul Oranı (%)", "Ort. Cevap (sa)", "Teklif", "Satış"]}
-              rows={partnerPerformance.map((p) => [
-                p.partnerName,
-                p.rating != null ? p.rating.toFixed(1) : "",
-                p.referralCount,
-                p.acceptanceRate,
-                p.avgResponseHours ?? "",
-                p.offerCount,
-                p.salesCount,
-              ])}
+              headers={["Partner", "Manuel Puan", "Hesaplanan Puan", "Yönlendirme", "Kabul Oranı (%)", "Ort. Cevap (sa)", "Teklif", "Satış"]}
+              rows={partnerPerformance.map((p) => {
+                const suggested = computeSuggestedPartnerRating(p);
+                return [
+                  p.partnerName,
+                  p.rating != null ? p.rating.toFixed(1) : "",
+                  suggested != null ? suggested.toFixed(1) : "",
+                  p.referralCount,
+                  p.acceptanceRate,
+                  p.avgResponseHours ?? "",
+                  p.offerCount,
+                  p.salesCount,
+                ];
+              })}
             />
           )}
         </div>
@@ -254,6 +259,7 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
                 <tr>
                   <th className="py-2 font-medium">Partner</th>
                   <th className="py-2 font-medium">Manuel Puan</th>
+                  <th className="py-2 font-medium">Hesaplanan Puan</th>
                   <th className="py-2 font-medium">Yönlendirme</th>
                   <th className="py-2 font-medium">Kabul Oranı</th>
                   <th className="py-2 font-medium">Ort. Cevap</th>
@@ -262,19 +268,23 @@ async function BreakdownGrid({ range }: { range: ReportRange }) {
                 </tr>
               </thead>
               <tbody>
-                {partnerPerformance.map((p) => (
-                  <tr key={p.partnerId} className="border-b border-card-border last:border-0">
-                    <td className="py-2 text-foreground">{p.partnerName}</td>
-                    <td className="py-2 text-muted">{p.rating != null ? p.rating.toFixed(1) : "—"}</td>
-                    <td className="py-2 text-muted">{p.referralCount}</td>
-                    <td className="py-2 text-muted">%{p.acceptanceRate}</td>
-                    <td className="py-2 text-muted">
-                      {p.avgResponseHours != null ? `${p.avgResponseHours} sa` : "—"}
-                    </td>
-                    <td className="py-2 text-muted">{p.offerCount}</td>
-                    <td className="py-2 text-green-700">{p.salesCount}</td>
-                  </tr>
-                ))}
+                {partnerPerformance.map((p) => {
+                  const suggested = computeSuggestedPartnerRating(p);
+                  return (
+                    <tr key={p.partnerId} className="border-b border-card-border last:border-0">
+                      <td className="py-2 text-foreground">{p.partnerName}</td>
+                      <td className="py-2 text-muted">{p.rating != null ? p.rating.toFixed(1) : "—"}</td>
+                      <td className="py-2 text-muted">{suggested != null ? suggested.toFixed(1) : "—"}</td>
+                      <td className="py-2 text-muted">{p.referralCount}</td>
+                      <td className="py-2 text-muted">%{p.acceptanceRate}</td>
+                      <td className="py-2 text-muted">
+                        {p.avgResponseHours != null ? `${p.avgResponseHours} sa` : "—"}
+                      </td>
+                      <td className="py-2 text-muted">{p.offerCount}</td>
+                      <td className="py-2 text-green-700">{p.salesCount}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

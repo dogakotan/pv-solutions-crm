@@ -160,3 +160,16 @@ export async function findPartnerIdByEmail(email: string): Promise<string | null
   if (error) throw error;
   return data?.partner_id ?? null;
 }
+
+export async function getPartnerPerformanceRow(partnerId: string): Promise<{
+  acceptance_rate: number;
+  avg_response_hours: number | null;
+  sales_count: number;
+  referral_count: number;
+} | null> {
+  const { data, error } = await adminClient().rpc("get_partner_performance", {
+    p_partner_id: partnerId,
+  });
+  if (error) throw error;
+  return data?.[0] ?? null;
+}

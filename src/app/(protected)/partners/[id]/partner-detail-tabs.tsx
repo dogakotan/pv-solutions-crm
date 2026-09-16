@@ -7,6 +7,7 @@ import type { PartnerSalesOutcomeItem } from "@/lib/data/sales-outcomes";
 import type { OpenPartnerReferral } from "@/lib/data/partners";
 import type { PartnerOfferItem } from "@/lib/data/offers";
 import type { PartnerPerformanceItem } from "@/lib/data/reports";
+import { computeSuggestedPartnerRating } from "@/lib/partner-rating";
 import { ReferralStatusBadge } from "@/components/lead-badges";
 import { OfferStatusBadge } from "@/components/offer-badges";
 import { PartnerEmployeesTab } from "./partner-employees-tab";
@@ -59,6 +60,15 @@ export function PartnerDetailTabs({
   const [activeTab, setActiveTab] = useState<PartnerTabKey>(
     visibleTabs.some((t) => t.key === initialTab) ? initialTab : "info"
   );
+
+  const suggestedRating = performance
+    ? computeSuggestedPartnerRating({
+        acceptanceRate: performance.acceptanceRate,
+        avgResponseHours: performance.avgResponseHours,
+        salesCount: performance.salesCount,
+        referralCount: performance.referralCount,
+      })
+    : null;
 
   function selectTab(key: PartnerTabKey) {
     setActiveTab(key);
@@ -227,6 +237,9 @@ export function PartnerDetailTabs({
               <PerformanceStat
                 label="Manuel Puan"
                 value={performance.rating != null ? performance.rating.toFixed(1) : "—"}
+                hint={
+                  suggestedRating != null ? `Hesaplanan: ${suggestedRating.toFixed(1)}` : undefined
+                }
               />
             </div>
           )
@@ -236,11 +249,20 @@ export function PartnerDetailTabs({
   );
 }
 
-function PerformanceStat({ label, value }: { label: string; value: string }) {
+function PerformanceStat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
   return (
     <div className="rounded-lg border border-card-border p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
       <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
+      {hint && <p className="mt-0.5 text-xs text-muted">{hint}</p>}
     </div>
   );
 }

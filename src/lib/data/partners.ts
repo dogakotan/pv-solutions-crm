@@ -143,6 +143,7 @@ export async function getOpenReferralsForPartner(
     .select("id, status, sent_at, response_due_at, lead_id, leads(lead_no, customer_name, city)")
     .eq("partner_id", partnerId)
     .is("closed_at", null)
+    .is("leads.deleted_at", null)
     .order("sent_at", { ascending: false });
 
   if (error) throw error;
@@ -197,6 +198,7 @@ export async function getRecentPartnerActivity(
   const { data, error } = await supabase
     .from("partner_referrals")
     .select("id, status, updated_at, partner_id, lead_id, partners(name), leads(lead_no, customer_name, city)")
+    .is("leads.deleted_at", null)
     .order("updated_at", { ascending: false })
     .limit(limit);
 

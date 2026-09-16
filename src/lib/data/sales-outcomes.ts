@@ -98,6 +98,7 @@ export async function getSalesOutcomesForPartner(
       "id, outcome, final_amount, currency, lost_reason, result_date, partner_referrals!inner(partner_id), leads(lead_no, customer_name)"
     )
     .eq("partner_referrals.partner_id", partnerId)
+    .is("leads.deleted_at", null)
     .order("result_date", { ascending: false });
 
   if (error) throw error;

@@ -51,6 +51,7 @@ export async function getVisibleOffers(supabase: TypedSupabaseClient, limit = 50
   const { data, error } = await supabase
     .from("offers")
     .select("id, offer_no, status, created_at, leads(lead_no, customer_name)")
+    .is("leads.deleted_at", null)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -133,6 +134,7 @@ export async function getOfferById(supabase: TypedSupabaseClient, id: string): P
     .from("offers")
     .select("id, offer_no, status, created_at, leads(lead_no, customer_name)")
     .eq("id", id)
+    .is("leads.deleted_at", null)
     .maybeSingle();
 
   if (error) throw error;

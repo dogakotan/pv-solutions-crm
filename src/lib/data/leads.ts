@@ -400,6 +400,7 @@ export async function getVisiblePartnerReferrals(
   const { data, error } = await supabase
     .from("partner_referrals")
     .select("id, status, sent_at, response_due_at, leads(lead_no, customer_name, city, stage)")
+    .is("leads.deleted_at", null)
     .order("sent_at", { ascending: false })
     .limit(limit);
 
@@ -460,6 +461,7 @@ export async function getPartnerSiteVisits(supabase: TypedSupabaseClient): Promi
     .from("partner_referrals")
     .select("id, leads!inner(lead_no, customer_name, city, district, address, phone, next_follow_up_at)")
     .eq("leads.stage", "survey_scheduled")
+    .is("leads.deleted_at", null)
     .order("next_follow_up_at", { foreignTable: "leads", ascending: true, nullsFirst: false })
     .limit(100);
 

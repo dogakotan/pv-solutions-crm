@@ -8,16 +8,15 @@ import {
   findPartnerIdByEmail,
   hasCleanupCredentials,
 } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
 // Dördüncü tur inceleme: getPartnerSiteVisits (ve aynı desendeki diğer
 // partner-facing sorgular) leads join'inde deleted_at is null filtresi hiç
 // taşımıyordu — admin bir lead'i sildikten sonra bile partner, o lead'in
 // telefon/adres bilgisini Keşif Ziyaretleri'nde görmeye devam ediyordu.
 test.describe("Soft-silinen lead partner'a sızmıyor (getPartnerSiteVisits)", () => {
-  const adminEmail = process.env.E2E_TEST_EMAIL;
-  const adminPassword = process.env.E2E_TEST_PASSWORD;
-  const partnerEmail = process.env.PARTNER_ADMIN_TEST_EMAIL;
-  const partnerPassword = process.env.PARTNER_ADMIN_TEST_PASSWORD;
+  const { email: adminEmail, password: adminPassword } = getCredentials("admin");
+  const { email: partnerEmail, password: partnerPassword } = getCredentials("partner_admin");
 
   test.skip(!adminEmail || !adminPassword, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
   test.skip(

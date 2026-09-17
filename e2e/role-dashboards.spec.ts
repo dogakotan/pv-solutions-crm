@@ -1,45 +1,22 @@
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
+import { getCredentials } from "./helpers/credentials";
 
 const ERROR_BOUNDARY_TEXT = "Bir şeyler ters gitti";
 
 type RoleCase = {
   role: string;
-  email: string | undefined;
-  password: string | undefined;
+  email?: string;
+  password?: string;
   path: string;
   heading: string;
 };
 
 const ROLE_CASES: RoleCase[] = [
-  {
-    role: "admin",
-    email: process.env.E2E_TEST_EMAIL,
-    password: process.env.E2E_TEST_PASSWORD,
-    path: "/admin",
-    heading: "Genel Bakış",
-  },
-  {
-    role: "sales",
-    email: process.env.SALES_TEST_EMAIL,
-    password: process.env.SALES_TEST_PASSWORD,
-    path: "/sales",
-    heading: "Genel Bakış",
-  },
-  {
-    role: "first_call",
-    email: process.env.FIRST_CALL_TEST_EMAIL,
-    password: process.env.FIRST_CALL_TEST_PASSWORD,
-    path: "/first-call",
-    heading: "Genel Bakış",
-  },
-  {
-    role: "partner_admin",
-    email: process.env.PARTNER_ADMIN_TEST_EMAIL,
-    password: process.env.PARTNER_ADMIN_TEST_PASSWORD,
-    path: "/partner",
-    heading: "Genel Bakış",
-  },
+  { role: "admin", ...getCredentials("admin"), path: "/admin", heading: "Genel Bakış" },
+  { role: "sales", ...getCredentials("sales"), path: "/sales", heading: "Genel Bakış" },
+  { role: "first_call", ...getCredentials("first_call"), path: "/first-call", heading: "Genel Bakış" },
+  { role: "partner_admin", ...getCredentials("partner_admin"), path: "/partner", heading: "Genel Bakış" },
 ];
 
 test.describe("rol bazlı Genel Bakış sayfaları (RPC KPI/aksiyon sorguları)", () => {
@@ -57,8 +34,7 @@ test.describe("rol bazlı Genel Bakış sayfaları (RPC KPI/aksiyon sorguları)"
 });
 
 test.describe("first_call sayfaları", () => {
-  const email = process.env.FIRST_CALL_TEST_EMAIL;
-  const password = process.env.FIRST_CALL_TEST_PASSWORD;
+  const { email, password } = getCredentials("first_call");
 
   test.skip(!email || !password, "FIRST_CALL_TEST_EMAIL / FIRST_CALL_TEST_PASSWORD tanımlı değil — .env.local'e bakınız");
 
@@ -108,8 +84,7 @@ test.describe("first_call sayfaları", () => {
 });
 
 test.describe("RPC'ye taşınan admin sayfaları", () => {
-  const email = process.env.E2E_TEST_EMAIL;
-  const password = process.env.E2E_TEST_PASSWORD;
+  const { email, password } = getCredentials("admin");
 
   test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil — .env.local'e bakınız");
 

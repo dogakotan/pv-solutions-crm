@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
+import { getCredentials } from "./helpers/credentials";
 
 /**
  * RLS'in kendisini (Postgres seviyesinde) doğrulamak için aynı rolden
@@ -15,8 +16,7 @@ const UNAUTHORIZED_PATH = /\/unauthorized$/;
 
 test.describe("Rol-arası yetkilendirme sınırları (requireRole)", () => {
   test("sales kullanıcısı /admin/users'a erişemez", async ({ page }) => {
-    const email = process.env.SALES_TEST_EMAIL;
-    const password = process.env.SALES_TEST_PASSWORD;
+    const { email, password } = getCredentials("sales");
     test.skip(!email || !password, "SALES_TEST_EMAIL / SALES_TEST_PASSWORD tanımlı değil");
 
     await loginAs(page, email!, password!);
@@ -27,8 +27,7 @@ test.describe("Rol-arası yetkilendirme sınırları (requireRole)", () => {
   });
 
   test("first_call kullanıcısı /admin/audit-log'a erişemez", async ({ page }) => {
-    const email = process.env.FIRST_CALL_TEST_EMAIL;
-    const password = process.env.FIRST_CALL_TEST_PASSWORD;
+    const { email, password } = getCredentials("first_call");
     test.skip(!email || !password, "FIRST_CALL_TEST_EMAIL / FIRST_CALL_TEST_PASSWORD tanımlı değil");
 
     await loginAs(page, email!, password!);
@@ -38,8 +37,7 @@ test.describe("Rol-arası yetkilendirme sınırları (requireRole)", () => {
   });
 
   test("partner_admin kullanıcısı /leads/[id] detay sayfasına erişemez", async ({ page }) => {
-    const email = process.env.PARTNER_ADMIN_TEST_EMAIL;
-    const password = process.env.PARTNER_ADMIN_TEST_PASSWORD;
+    const { email, password } = getCredentials("partner_admin");
     test.skip(!email || !password, "PARTNER_ADMIN_TEST_EMAIL / PARTNER_ADMIN_TEST_PASSWORD tanımlı değil");
 
     await loginAs(page, email!, password!);
@@ -51,8 +49,7 @@ test.describe("Rol-arası yetkilendirme sınırları (requireRole)", () => {
   });
 
   test("sales kullanıcısı /partner/assigned-leads'e erişemez", async ({ page }) => {
-    const email = process.env.SALES_TEST_EMAIL;
-    const password = process.env.SALES_TEST_PASSWORD;
+    const { email, password } = getCredentials("sales");
     test.skip(!email || !password, "SALES_TEST_EMAIL / SALES_TEST_PASSWORD tanımlı değil");
 
     await loginAs(page, email!, password!);
@@ -62,8 +59,7 @@ test.describe("Rol-arası yetkilendirme sınırları (requireRole)", () => {
   });
 
   test("partner_admin kullanıcısı /first-call/new-lead'e erişemez", async ({ page }) => {
-    const email = process.env.PARTNER_ADMIN_TEST_EMAIL;
-    const password = process.env.PARTNER_ADMIN_TEST_PASSWORD;
+    const { email, password } = getCredentials("partner_admin");
     test.skip(!email || !password, "PARTNER_ADMIN_TEST_EMAIL / PARTNER_ADMIN_TEST_PASSWORD tanımlı değil");
 
     await loginAs(page, email!, password!);

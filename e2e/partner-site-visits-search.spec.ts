@@ -8,10 +8,10 @@ import {
   findUserIdByEmail,
   hasCleanupCredentials,
 } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
-const ADMIN_EMAIL = process.env.E2E_TEST_EMAIL;
-const PARTNER_EMAIL = process.env.PARTNER_ADMIN_TEST_EMAIL;
-const PARTNER_PASSWORD = process.env.PARTNER_ADMIN_TEST_PASSWORD;
+const { email: ADMIN_EMAIL } = getCredentials("admin");
+const { email: PARTNER_EMAIL, password: PARTNER_PASSWORD } = getCredentials("partner_admin");
 
 // Beşinci tur, önceden bilinçli atlanmış madde: LeadsTable/ReferralsTable/
 // UsersTable'ın aksine, Keşif Ziyaretleri sayfasında hiç istemci-taraflı

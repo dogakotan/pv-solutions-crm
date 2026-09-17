@@ -9,6 +9,7 @@ import {
   getPartnerPerformanceRow,
   hasCleanupCredentials,
 } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
 // src/lib/partner-rating.ts'deki computeSuggestedPartnerRating ile aynı formül —
 // e2e testinin uygulama koduna (module resolution/path alias) bağımlı olmadan
@@ -29,12 +30,9 @@ function computeSuggestedPartnerRating(input: {
 }
 
 test.describe("Partnerin hesaplanan puanı (3.6 — set_partner_rating'den bağımsız görünürlük)", () => {
-  const salesEmail = process.env.SALES_TEST_EMAIL;
-  const salesPassword = process.env.SALES_TEST_PASSWORD;
-  const partnerEmail = process.env.PARTNER_ADMIN_TEST_EMAIL;
-  const partnerPassword = process.env.PARTNER_ADMIN_TEST_PASSWORD;
-  const adminEmail = process.env.E2E_TEST_EMAIL;
-  const adminPassword = process.env.E2E_TEST_PASSWORD;
+  const { email: salesEmail, password: salesPassword } = getCredentials("sales");
+  const { email: partnerEmail, password: partnerPassword } = getCredentials("partner_admin");
+  const { email: adminEmail, password: adminPassword } = getCredentials("admin");
 
   test.skip(!salesEmail || !salesPassword, "SALES_TEST_EMAIL / SALES_TEST_PASSWORD tanımlı değil");
   test.skip(

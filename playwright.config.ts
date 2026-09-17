@@ -12,14 +12,18 @@ loadEnvConfig(process.cwd());
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
-  // Kimlik doğrulanmış testlerin tümü tek, paylaşılan bir E2E test hesabıyla
-  // (E2E_TEST_EMAIL) giriş yapıyor — Supabase SSR client'ı her sunucu
-  // isteğinde oturumu tazeleyebiliyor (refresh token tek kullanımlık);
-  // aynı hesapla eşzamanlı birden çok worker/context bunu yarış durumuna
-  // sokup rastgele "sessiz çıkış" (o testin ortasında /login'e düşme)
-  // üretiyordu. workers: 1 bu yarışı tamamen ortadan kaldırıyor — küçük
-  // bir suit olduğundan toplam süre maliyeti kabul edilebilir.
-  workers: 1,
+  // Kimlik doğrulanmış testler paylaşılan E2E test hesaplarıyla (E2E_TEST_EMAIL
+  // vb.) giriş yapıyor — Supabase SSR client'ının refresh token'ı tek
+  // kullanımlık olduğundan, aynı hesabın eşzamanlı birden çok worker/context
+  // tarafından kullanılması bunu yarış durumuna sokup rastgele "sessiz çıkış"
+  // (o testin ortasında /login'e düşme) üretiyordu. Gerçek düzeltim: her
+  // worker'a kendi izole hesap setini vermek. globalSetup (e2e/global-setup.ts)
+  // worker 0 dışındaki her worker için geçici bir partner + 5 rol hesabı
+  // oluşturur (globalTeardown'da silinir) — bkz. e2e/helpers/credentials.ts.
+  // Worker 0 hâlâ paylaşılan hesapları kullanıyor, davranışı değişmedi.
+  workers: 3,
+  globalSetup: "./e2e/global-setup.ts",
+  globalTeardown: "./e2e/global-teardown.ts",
   reporter: "list",
   use: {
     baseURL: "http://localhost:3000",

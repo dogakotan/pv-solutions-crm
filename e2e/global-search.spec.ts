@@ -1,12 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 import { createTestLead, deleteLead, findUserIdByEmail, hasCleanupCredentials } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
 // İkinci tur inceleme: global_search RPC'sinin (header'daki arama kutusu)
 // hiç e2e kapsamı yoktu.
 test.describe("Genel arama (global_search RPC)", () => {
-  const email = process.env.E2E_TEST_EMAIL;
-  const password = process.env.E2E_TEST_PASSWORD;
+  const { email, password } = getCredentials("admin");
 
   test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
   test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");

@@ -8,10 +8,10 @@ import {
   findPartnerIdByEmail,
   hasCleanupCredentials,
 } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
 test.describe("Satış sonucu kaydetme (record_sales_outcome RPC)", () => {
-  const email = process.env.SALES_TEST_EMAIL;
-  const password = process.env.SALES_TEST_PASSWORD;
+  const { email, password } = getCredentials("sales");
 
   test.skip(!email || !password, "SALES_TEST_EMAIL / SALES_TEST_PASSWORD tanımlı değil");
   test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");
@@ -80,7 +80,7 @@ test.describe("Satış sonucu kaydetme (record_sales_outcome RPC)", () => {
   test("sales kullanıcısı 'Kazanıldı' sonrası malzeme/ERP durumunu güncelleyebilir (update_sales_outcome_fulfillment RPC)", async ({
     page,
   }) => {
-    const partnerEmail = process.env.PARTNER_ADMIN_TEST_EMAIL;
+    const { email: partnerEmail } = getCredentials("partner_admin");
     test.skip(!partnerEmail, "PARTNER_ADMIN_TEST_EMAIL tanımlı değil (create_offer için referral gerekiyor)");
 
     const salesUserId = await findUserIdByEmail(email!);
@@ -136,9 +136,8 @@ test.describe("Satış sonucu kaydetme (record_sales_outcome RPC)", () => {
 });
 
 test.describe("Partner yönlendirme yanıtı (respond_to_referral RPC)", () => {
-  const partnerEmail = process.env.PARTNER_ADMIN_TEST_EMAIL;
-  const partnerPassword = process.env.PARTNER_ADMIN_TEST_PASSWORD;
-  const adminEmail = process.env.E2E_TEST_EMAIL;
+  const { email: partnerEmail, password: partnerPassword } = getCredentials("partner_admin");
+  const { email: adminEmail } = getCredentials("admin");
 
   test.skip(!partnerEmail || !partnerPassword, "PARTNER_ADMIN_TEST_EMAIL / PARTNER_ADMIN_TEST_PASSWORD tanımlı değil");
   test.skip(!adminEmail, "E2E_TEST_EMAIL tanımlı değil (referred_by için)");
@@ -198,8 +197,7 @@ test.describe("Partner yönlendirme yanıtı (respond_to_referral RPC)", () => {
 });
 
 test.describe("Lead silme (soft_delete_lead RPC)", () => {
-  const email = process.env.E2E_TEST_EMAIL;
-  const password = process.env.E2E_TEST_PASSWORD;
+  const { email, password } = getCredentials("admin");
 
   test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
   test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");
@@ -227,8 +225,7 @@ test.describe("Lead silme (soft_delete_lead RPC)", () => {
 });
 
 test.describe("Önerilen partnerler (get_recommended_partners_for_lead RPC)", () => {
-  const email = process.env.E2E_TEST_EMAIL;
-  const password = process.env.E2E_TEST_PASSWORD;
+  const { email, password } = getCredentials("admin");
 
   test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
   test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");

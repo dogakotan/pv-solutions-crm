@@ -7,9 +7,9 @@ import {
   findUserIdByEmail,
   hasCleanupCredentials,
 } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
-const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
+const { email: TEST_EMAIL, password: TEST_PASSWORD } = getCredentials("admin");
 
 test.describe("partner çalışanı ekleme (provision_partner_employee RPC)", () => {
   test.skip(

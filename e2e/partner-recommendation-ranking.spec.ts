@@ -3,9 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 import { loginAs } from "./helpers/auth";
 import { createTestReferral, deleteLead, deletePartner, findUserIdByEmail, hasCleanupCredentials } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
-const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
+const { email: TEST_EMAIL, password: TEST_PASSWORD } = getCredentials("admin");
 
 function adminClient() {
   return createClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {

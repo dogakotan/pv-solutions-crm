@@ -9,10 +9,10 @@ import {
   hasCleanupCredentials,
   setLeadScoreForTest,
 } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
 test.describe("Lead Havuzu — sahiplenme (claim_lead RPC)", () => {
-  const email = process.env.FIRST_CALL_TEST_EMAIL;
-  const password = process.env.FIRST_CALL_TEST_PASSWORD;
+  const { email, password } = getCredentials("first_call");
   const webhookKey = process.env.GOOGLE_ADS_WEBHOOK_KEY;
 
   test.skip(!email || !password, "FIRST_CALL_TEST_EMAIL / FIRST_CALL_TEST_PASSWORD tanımlı değil");
@@ -62,8 +62,7 @@ test.describe("Lead Havuzu — sahiplenme (claim_lead RPC)", () => {
 });
 
 test.describe("Satışa toplu atama (assignManyToSales)", () => {
-  const email = process.env.FIRST_CALL_TEST_EMAIL;
-  const password = process.env.FIRST_CALL_TEST_PASSWORD;
+  const { email, password } = getCredentials("first_call");
 
   test.skip(!email || !password, "FIRST_CALL_TEST_EMAIL / FIRST_CALL_TEST_PASSWORD tanımlı değil");
   test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");
@@ -230,8 +229,7 @@ test.describe("Satışa toplu atama (assignManyToSales)", () => {
 // bulkAssignAction'ı iki akış için de aynı bileşen olsa da, gerçek
 // çalıştığı ayrı bir RPC/server action ve doğrulanmamış kalıyordu.
 test.describe("Partnere toplu atama (assignManyToPartner)", () => {
-  const email = process.env.E2E_TEST_EMAIL;
-  const password = process.env.E2E_TEST_PASSWORD;
+  const { email, password } = getCredentials("admin");
 
   test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
   test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");
@@ -333,8 +331,7 @@ test.describe("Partnere toplu atama (assignManyToPartner)", () => {
 });
 
 test.describe("Partnere tekli atama (assign_lead_to_partner RPC)", () => {
-  const email = process.env.E2E_TEST_EMAIL;
-  const password = process.env.E2E_TEST_PASSWORD;
+  const { email, password } = getCredentials("admin");
 
   test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
   test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");

@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 import { findUserIdByEmail, deleteTestUser, hasCleanupCredentials } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
 test.describe("Kullanıcı rolü/durumu yönetimi (set_user_role / set_user_active RPC)", () => {
-  const email = process.env.E2E_TEST_EMAIL;
-  const password = process.env.E2E_TEST_PASSWORD;
+  const { email, password } = getCredentials("admin");
 
   test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");
   test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");

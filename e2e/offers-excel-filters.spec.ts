@@ -10,10 +10,10 @@ import {
   findPartnerIdByEmail,
   hasCleanupCredentials,
 } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
-const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
-const PARTNER_ADMIN_TEST_EMAIL = process.env.PARTNER_ADMIN_TEST_EMAIL;
+const { email: TEST_EMAIL, password: TEST_PASSWORD } = getCredentials("admin");
+const { email: PARTNER_ADMIN_TEST_EMAIL } = getCredentials("partner_admin");
 
 // Dördüncü tur inceleme: Teklifler > Teklif Listesi'ndeki Excel export'u
 // tarih/tutar filtrelerini hiç forward etmiyordu — ekranda "tutar >= 10000"

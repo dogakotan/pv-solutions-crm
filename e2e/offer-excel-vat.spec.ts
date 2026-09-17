@@ -11,10 +11,10 @@ import {
   findPartnerIdByEmail,
   hasCleanupCredentials,
 } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
-const TEST_EMAIL = process.env.E2E_TEST_EMAIL;
-const TEST_PASSWORD = process.env.E2E_TEST_PASSWORD;
-const PARTNER_ADMIN_TEST_EMAIL = process.env.PARTNER_ADMIN_TEST_EMAIL;
+const { email: TEST_EMAIL, password: TEST_PASSWORD } = getCredentials("admin");
+const { email: PARTNER_ADMIN_TEST_EMAIL } = getCredentials("partner_admin");
 
 // Dördüncü tur inceleme: kalem satırları girilmiş bir teklifte, Excel
 // export'u offer.amount/vatIncluded'ı tamamen görmezden gelip toplamları

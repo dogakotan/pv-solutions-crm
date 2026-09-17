@@ -2,6 +2,7 @@ import { createHmac } from "crypto";
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 import { deleteNotificationByDedupKey, hasCleanupCredentials } from "./helpers/cleanup";
+import { getCredentials } from "./helpers/credentials";
 
 /**
  * Meta webhook, bir leadgen_id'yi işleyemediğinde (örn. Graph API isteği
@@ -13,8 +14,7 @@ import { deleteNotificationByDedupKey, hasCleanupCredentials } from "./helpers/c
  * gerçek (mock'lanmamış) başarısızlığı kullanıyor.
  */
 test.describe("Webhook lead hatası bildirimi (notify_admins_webhook_lead_failure RPC)", () => {
-  const email = process.env.E2E_TEST_EMAIL;
-  const password = process.env.E2E_TEST_PASSWORD;
+  const { email, password } = getCredentials("admin");
   const appSecret = process.env.META_WEBHOOK_APP_SECRET;
 
   test.skip(!email || !password, "E2E_TEST_EMAIL / E2E_TEST_PASSWORD tanımlı değil");

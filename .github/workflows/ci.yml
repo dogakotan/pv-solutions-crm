@@ -29,13 +29,19 @@ jobs:
   # korunur) değerler olduğundan repo Variables olarak eklenmesi yeterli
   # (Settings > Secrets and variables > Actions > Variables). Eklenene
   # kadar bu job env eksikliğinden başarısız olur.
-  # E2E_TEST_EMAIL / E2E_TEST_PASSWORD / SUPABASE_SERVICE_ROLE_KEY kimlik
-  # doğrulanmış akışlar (lead/partner/teklif/çalışan oluşturma) için gerekli
-  # ve hassas oldukları için repo Secrets olarak eklenmeli (Settings >
+  #
+  # Kimlik doğrulanmış akışlar BEŞ ayrı rol hesabı gerektiriyor (pv_admin,
+  # pv_sales, first_call, partner_admin, partner_employee) — webhook
+  # route'ları da ayrıca üç paylaşımlı gizli anahtar/token gerektiriyor.
+  # Hepsi hassas olduğu için repo Secrets olarak eklenmeli (Settings >
   # Secrets and variables > Actions > Secrets) — Variables'tan farklı olarak
-  # loglarda maskelenir. Eklenene kadar bu testler CI'da kendini skip eder
-  # (bkz. e2e/*.spec.ts içindeki test.skip koşulları), build/smoke testleri
-  # etkilenmez.
+  # loglarda maskelenir. Beşinci tur incelemede fark edildi: bunlardan
+  # yalnızca E2E_TEST_EMAIL/PASSWORD eklenmişti, geri kalan tümü eksikti —
+  # bu da bağımlı testlerin (suite'in ~%64'ü) CI'da fail değil, sessizce
+  # test.skip ile atlanmasına yol açıyordu ("CI yeşil" göstergesi bu yüzden
+  # yanıltıcıydı). Eklenene kadar bir env eksik olursa yalnızca o env'e
+  # bağımlı testler kendini skip eder (bkz. e2e/*.spec.ts içindeki
+  # test.skip koşulları), build/smoke testleri etkilenmez.
   e2e:
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
@@ -45,6 +51,17 @@ jobs:
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       E2E_TEST_EMAIL: ${{ secrets.E2E_TEST_EMAIL }}
       E2E_TEST_PASSWORD: ${{ secrets.E2E_TEST_PASSWORD }}
+      SALES_TEST_EMAIL: ${{ secrets.SALES_TEST_EMAIL }}
+      SALES_TEST_PASSWORD: ${{ secrets.SALES_TEST_PASSWORD }}
+      FIRST_CALL_TEST_EMAIL: ${{ secrets.FIRST_CALL_TEST_EMAIL }}
+      FIRST_CALL_TEST_PASSWORD: ${{ secrets.FIRST_CALL_TEST_PASSWORD }}
+      PARTNER_ADMIN_TEST_EMAIL: ${{ secrets.PARTNER_ADMIN_TEST_EMAIL }}
+      PARTNER_ADMIN_TEST_PASSWORD: ${{ secrets.PARTNER_ADMIN_TEST_PASSWORD }}
+      PARTNER_EMPLOYEE_TEST_EMAIL: ${{ secrets.PARTNER_EMPLOYEE_TEST_EMAIL }}
+      PARTNER_EMPLOYEE_TEST_PASSWORD: ${{ secrets.PARTNER_EMPLOYEE_TEST_PASSWORD }}
+      GOOGLE_ADS_WEBHOOK_KEY: ${{ secrets.GOOGLE_ADS_WEBHOOK_KEY }}
+      META_WEBHOOK_VERIFY_TOKEN: ${{ secrets.META_WEBHOOK_VERIFY_TOKEN }}
+      META_WEBHOOK_APP_SECRET: ${{ secrets.META_WEBHOOK_APP_SECRET }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4

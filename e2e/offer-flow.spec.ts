@@ -233,4 +233,59 @@ test.describe("teklif kabul/red (respond_to_offer RPC)", () => {
       if (leadId) await deleteLead(leadId);
     }
   });
+
+  // Altıncı tur inceleme, KRİTİK bulgu: revise_offer en son revizyonun
+  // durumuna hiç bakmıyordu — partner_admin bir revizyonu kabul ettikten
+  // sonra bile pv_sales/pv_admin "Revize Et" ile kabul kanıtını sessizce
+  // 'superseded'e çevirip altına yeni, kararsız bir revizyon ekleyebiliyordu.
+  // Bu test, kabul edilince "Revize Et" butonunun artık hiç render
+  // edilmediğini (RPC'nin kendisi de ayrıca gerçek SQL rol-taklidiyle
+  // doğrulandı — bkz. commit mesajı) doğruluyor.
+  test("bir revizyon kabul edilince 'Revize Et' butonu artık gösterilmiyor", async ({ page, browser }) => {
+    const customerName = `E2E-AcceptedNoRevise-${Date.now()}`;
+
+    try {
+      await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);
+      await createLeadViaUi(page, customerName);
+      const leadId = await findLeadIdByCustomerName(customerName);
+      expect(leadId).toBeTruthy();
+
+      const [adminId, partnerId] = await Promise.all([
+        findUserIdByEmail(TEST_EMAIL!),
+        findPartnerIdByEmail(PARTNER_ADMIN_TEST_EMAIL!),
+      ]);
+      expect(adminId).not.toBeNull();
+      expect(partnerId).not.toBeNull();
+      await createTestReferral({ leadId: leadId!, partnerId: partnerId!, referredBy: adminId! });
+
+      await page.goto(`/leads/${leadId}`);
+      await page.getByRole("button", { name: "Teklif Gönder" }).click();
+      await page.fill('input[name="amount"]', "10000");
+      await page.getByRole("button", { name: "Teklifi Gönder" }).click();
+      await expect(page.getByRole("button", { name: /Rev\.0/ })).toBeVisible({ timeout: 15_000 });
+
+      const offerId = await findOfferIdByLeadId(leadId!);
+      expect(offerId).toBeTruthy();
+
+      // partner_admin /leads/[id]'e erişemez (bkz. authorization-boundaries.spec.ts)
+      // — kabul/red her zaman /offers/[id] üzerinden yapılır.
+      const adminPartnerContext = await browser.newContext();
+      const adminPartnerPage = await adminPartnerContext.newPage();
+      await loginAs(adminPartnerPage, PARTNER_ADMIN_TEST_EMAIL!, PARTNER_ADMIN_TEST_PASSWORD!);
+      await adminPartnerPage.goto(`/offers/${offerId}`);
+      await adminPartnerPage.getByRole("button", { name: /Rev\.0/ }).click();
+      await adminPartnerPage.getByRole("button", { name: "Kabul Et" }).click();
+      await expect(adminPartnerPage.getByRole("button", { name: /Rev\.0.*Kabul Edildi/ })).toBeVisible({
+        timeout: 10_000,
+      });
+      await adminPartnerContext.close();
+
+      await page.reload();
+      await expect(page.getByText("En son revizyon kabul edildi")).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByRole("button", { name: "Revize Et" })).toHaveCount(0);
+    } finally {
+      const leadId = await findLeadIdByCustomerName(customerName);
+      if (leadId) await deleteLead(leadId);
+    }
+  });
 });

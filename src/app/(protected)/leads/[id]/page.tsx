@@ -361,13 +361,18 @@ async function TeklifGecmisiCard({
             ))}
           </div>
 
-          {canManageOffers && (
-            <OfferForm
-              leadId={leadId}
-              offerId={offerHistory.offerId}
-              latestVersion={offerHistory.versions[0] ?? null}
-            />
-          )}
+          {canManageOffers &&
+            (offerHistory.versions[0]?.status === "accepted" ? (
+              <p className="text-sm text-muted">
+                En son revizyon kabul edildi — kabul edilmiş bir revizyon üzerine yeni revizyon gönderilemez.
+              </p>
+            ) : (
+              <OfferForm
+                leadId={leadId}
+                offerId={offerHistory.offerId}
+                latestVersion={offerHistory.versions[0] ?? null}
+              />
+            ))}
         </div>
       ) : canManageOffers ? (
         activeReferral ? (

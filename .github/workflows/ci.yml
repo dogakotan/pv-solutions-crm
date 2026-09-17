@@ -42,9 +42,20 @@ jobs:
   # yanıltıcıydı). Eklenene kadar bir env eksik olursa yalnızca o env'e
   # bağımlı testler kendini skip eder (bkz. e2e/*.spec.ts içindeki
   # test.skip koşulları), build/smoke testleri etkilenmez.
+  # concurrency: e2e/global-setup.ts, sabit (.invalid TLD, run'a özgü
+  # olmayan) e-posta/partner_code'larla worker başına GERÇEK, CANLI
+  # Supabase kayıtları oluşturup siliyor. Bu grup dalı/ref'i DEĞİL, sabit
+  # bir string kullanıyor — amaç bu job'ın hangi PR/push'tan tetiklendiğine
+  # bakmaksızın asla iki kopyasının aynı anda çalışmaması (aksi halde bir
+  # run'ın teardown'ı diğerinin hâlâ kullandığı hesapları silebilir).
+  # cancel-in-progress: false — yarışan run'ı iptal etmek yerine kuyruğa
+  # alıyoruz, aksi halde iptal edilen run'ın kendi teardown'ı hiç çalışmaz.
   e2e:
     runs-on: ubuntu-latest
     needs: lint-and-typecheck
+    concurrency:
+      group: e2e-shared-supabase-project
+      cancel-in-progress: false
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}

@@ -64,7 +64,9 @@ test.describe("first_call sayfaları", () => {
     await expect(page.getByRole("button", { name: "Havuzdaki Yeni Leadler" })).toBeVisible();
 
     await page.getByRole("button", { name: "Takip Ettiklerim" }).click();
-    await expect(page.getByPlaceholder("Müşteri, lead no veya şehir ara...")).toBeVisible();
+    // Sekme, kendi verisini istemci tarafında çekiyor — 3 worker'ın eşzamanlı
+    // sunucu yükü altında varsayılan 5sn bazen yetmiyor.
+    await expect(page.getByPlaceholder("Müşteri, lead no veya şehir ara...")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
   });
 

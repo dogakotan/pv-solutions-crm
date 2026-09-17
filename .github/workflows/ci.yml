@@ -32,7 +32,7 @@ jobs:
   #
   # Kimlik doğrulanmış akışlar BEŞ ayrı rol hesabı gerektiriyor (pv_admin,
   # pv_sales, first_call, partner_admin, partner_employee) — webhook
-  # route'ları da ayrıca üç paylaşımlı gizli anahtar/token gerektiriyor.
+  # route'ları da ayrıca dört paylaşımlı gizli anahtar/token gerektiriyor.
   # Hepsi hassas olduğu için repo Secrets olarak eklenmeli (Settings >
   # Secrets and variables > Actions > Secrets) — Variables'tan farklı olarak
   # loglarda maskelenir. Beşinci tur incelemede fark edildi: bunlardan
@@ -62,6 +62,7 @@ jobs:
       GOOGLE_ADS_WEBHOOK_KEY: ${{ secrets.GOOGLE_ADS_WEBHOOK_KEY }}
       META_WEBHOOK_VERIFY_TOKEN: ${{ secrets.META_WEBHOOK_VERIFY_TOKEN }}
       META_WEBHOOK_APP_SECRET: ${{ secrets.META_WEBHOOK_APP_SECRET }}
+      META_PAGE_ACCESS_TOKEN: ${{ secrets.META_PAGE_ACCESS_TOKEN }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
     steps:
       - uses: actions/checkout@v4

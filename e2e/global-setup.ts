@@ -13,7 +13,7 @@ import { adminClient, emailFor, partnerCodeFor, teardownWorkerIndex } from "./he
  * token'ı, aynı hesabın eşzamanlı worker'larca kullanılmasını yarış
  * durumuna sokuyordu). workers sayısı değişirse bu liste de güncellenmeli.
  */
-const EXTRA_WORKER_INDICES = [1, 2];
+const EXTRA_WORKER_INDICES = [1];
 
 const ROLES: { role: TestRole; namePrefix: string }[] = [
   { role: "admin", namePrefix: "Admin" },

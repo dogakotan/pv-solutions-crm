@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { WORKER_CREDENTIALS_PATH } from "./helpers/credentials";
 import { teardownWorkerIndex } from "./helpers/worker-provisioning";
 
-const EXTRA_WORKER_INDICES = [1, 2];
+const EXTRA_WORKER_INDICES = [1];
 
 /** global-setup.ts'te oluşturulan geçici worker hesaplarını/partner'larını siler. */
 export default async function globalTeardown(): Promise<void> {

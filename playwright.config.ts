@@ -21,7 +21,11 @@ export default defineConfig({
   // worker 0 dışındaki her worker için geçici bir partner + 5 rol hesabı
   // oluşturur (globalTeardown'da silinir) — bkz. e2e/helpers/credentials.ts.
   // Worker 0 hâlâ paylaşılan hesapları kullanıyor, davranışı değişmedi.
-  workers: 3,
+  // workers: 3 denendi ama GitHub Actions'ın standart (2 vCPU) runner'ında
+  // 3 eşzamanlı Chromium + Next.js sunucusu gerçek kaynak baskısı yaratıp
+  // ilgisiz testlerde tutarsız zaman aşımlarına yol açtı (izole hesap
+  // mantığı değil, saf CPU/G-Ç darboğazı) — 2'ye düşürüldü.
+  workers: 2,
   globalSetup: "./e2e/global-setup.ts",
   globalTeardown: "./e2e/global-teardown.ts",
   reporter: "list",

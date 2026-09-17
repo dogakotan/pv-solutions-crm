@@ -10,4 +10,5 @@ export type OfferVersionStatus =
   | "superseded"
   | "accepted"
   | "rejected"
-  | "expired";
+  | "expired"
+  | "withdrawn";

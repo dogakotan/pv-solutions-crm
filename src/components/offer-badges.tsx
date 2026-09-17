@@ -24,6 +24,7 @@ const VERSION_STATUS_STYLES: Record<OfferVersionStatus, { label: string; classNa
   accepted: { label: "Kabul Edildi", className: "bg-green-50 text-green-700" },
   rejected: { label: "Reddedildi", className: "bg-red-50 text-red-700" },
   expired: { label: "Süresi Doldu", className: "bg-red-50 text-red-700" },
+  withdrawn: { label: "Geri Çekildi", className: "bg-neutral-100 text-neutral-600" },
 };
 
 export function OfferVersionStatusBadge({ status }: { status: OfferVersionStatus }) {

@@ -51,12 +51,16 @@ export type OfferOverviewItem = OfferListItem & {
   amount: number | null;
   currency: string | null;
   nextActionAt: string | null;
+  latestVersionStatus: OfferVersionStatus | null;
 };
 
 /**
  * Teklifler > Genel/Teklif Listesi sayfaları ve Excel export'u için — her
  * teklife en son revizyonun tutarı ve geçerlilik tarihini ("sonraki aksiyon
  * tarihi" olarak kullanılıyor) ekler; tek sorguda bir RPC ile çekiliyor.
+ * latestVersionStatus, "Aksiyon Gerektiren Teklifler" listesinin partner
+ * kabul ettikten (respond_to_offer kasıtlı olarak offers.status'a
+ * dokunmuyor) sonra hâlâ "aksiyon bekliyor" göstermesini önlemek için var.
  */
 export async function getOffersOverview(supabase: TypedSupabaseClient, limit = 500): Promise<OfferOverviewItem[]> {
   const { data, error } = await supabase.rpc("get_offers_overview", { p_limit: limit });
@@ -72,6 +76,7 @@ export async function getOffersOverview(supabase: TypedSupabaseClient, limit = 5
     amount: row.amount,
     currency: row.currency,
     nextActionAt: row.next_action_at,
+    latestVersionStatus: row.latest_version_status as OfferVersionStatus | null,
   }));
 }
 

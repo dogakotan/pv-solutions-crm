@@ -1634,6 +1634,7 @@ export type Database = {
           currency: string
           customer_name: string
           id: string
+          latest_version_status: string
           lead_no: string
           next_action_at: string
           offer_no: string

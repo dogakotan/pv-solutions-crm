@@ -37,12 +37,19 @@ export function OffersOverviewTabs({ offers }: { offers: OfferOverviewItem[] }) 
   const openValueLabel = useMemo(() => formatOpenValue(offers), [offers]);
 
   const actionNeeded = useMemo(() => {
-    return [...openOffers].sort((a, b) => {
-      if (!a.nextActionAt && !b.nextActionAt) return 0;
-      if (!a.nextActionAt) return 1;
-      if (!b.nextActionAt) return -1;
-      return a.nextActionAt.localeCompare(b.nextActionAt);
-    });
+    // respond_to_offer'ın kabul yolu kasıtlı olarak offers.status'a
+    // dokunmuyor (nihai karar hâlâ record_sales_outcome'ın işi) — partner
+    // kabul ettikten, sales sonucu kaydedene kadar geçen sürede yapılacak
+    // bir şey kalmıyor, bu yüzden en son revizyonu zaten kabul edilmiş
+    // teklifler bu listeden çıkarılıyor.
+    return openOffers
+      .filter((o) => o.latestVersionStatus !== "accepted")
+      .sort((a, b) => {
+        if (!a.nextActionAt && !b.nextActionAt) return 0;
+        if (!a.nextActionAt) return 1;
+        if (!b.nextActionAt) return -1;
+        return a.nextActionAt.localeCompare(b.nextActionAt);
+      });
   }, [openOffers]);
 
   return (

@@ -68,9 +68,11 @@ export type RecommendedPartner = {
  * Bir lead için "önce semte, sonra puana göre" ilk 3 partneri önerir.
  * `region_code` serbest metin olduğundan (bkz. partners/new/actions.ts)
  * lead'in semti/şehri ile partnerin service_regions/city'si arasında
- * case-insensitive eşleşme aranır; adaylar `partners.rating` (0.0-5.0,
- * admin tarafından elle girilen performans puanı) alanına göre sıralanıp
- * en yüksek 3'ü döner.
+ * case-insensitive eşleşme aranır. Sıralama, `computeSuggestedPartnerRating`
+ * ile aynı formülün SQL karşılığı olan hesaplanan performans puanına göre
+ * yapılır (bkz. `rank_recommended_partners_by_suggested_score` migration'ı);
+ * hiç yönlendirme geçmişi olmayan partnerler için bu hesaplanamadığından
+ * `partners.rating`e (admin'in elle girdiği puana) geri düşülür.
  */
 export async function getRecommendedPartnersForLead(
   supabase: TypedSupabaseClient,

@@ -5,10 +5,12 @@
 -- sürümü kazanç/kayıp kaydına odaklanıyor" diye bilinçli bir erteleme
 -- olarak belgelenmişti). Kapsam kasıtlı olarak dar tutuluyor: yalnızca
 -- malzeme/ERP takibi. partner_performance_impact/performance_impact_reason
--- BİLİNÇLİ OLARAK dışarıda bırakıldı — bu, ayrı ve henüz çözülmemiş bir
--- yol haritası maddesiyle (3.6, partner puanının hesaplanan performanstan
--- kopuk olması) aynı konu; birlikte ele almak daha büyük ve daha riskli
--- bir değişiklik olurdu.
+-- BİLİNÇLİ OLARAK dışarıda bırakıldı — bu, ayrı bir yol haritası maddesiyle
+-- (3.6, partner puanının hesaplanan performanstan kopuk olması) aynı
+-- konu; birlikte ele almak daha büyük ve daha riskli bir değişiklik
+-- olurdu. (3.6'nın kendisi daha sonra ayrı ve dar kapsamlı bir çözümle
+-- kapatıldı — bkz. rank_recommended_partners_by_suggested_score migration'ı;
+-- bu ikisi hâlâ birleştirilmedi.)
 alter table public.sales_outcomes
   add constraint sales_outcomes_material_purchase_status_check
   check (material_purchase_status is null or material_purchase_status in ('pending', 'ordered', 'delivered'));

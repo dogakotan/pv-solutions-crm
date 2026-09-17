@@ -81,6 +81,8 @@ export type LeadDetail = {
   nextFollowUpAt: string | null;
   generalNotes: string | null;
   ownerName: string;
+  createdBy: string;
+  firstCallUserId: string | null;
 };
 
 type NameEmbed = { full_name: string } | { full_name: string }[] | null;
@@ -97,6 +99,7 @@ const LEAD_DETAIL_SELECT = `
   pool_interest, heat_pump_interest, ev_interest, battery_interest,
   competitor_offer_status, competitor_offer_note,
   stage, lead_score, next_follow_up_at, general_notes,
+  created_by, first_call_user_id,
   owner:profiles!leads_owner_id_fkey(full_name)
 `;
 
@@ -134,6 +137,8 @@ export async function getLeadById(supabase: TypedSupabaseClient, id: string): Pr
     nextFollowUpAt: data.next_follow_up_at,
     generalNotes: data.general_notes,
     ownerName: extractName(data.owner as NameEmbed) ?? "—",
+    createdBy: data.created_by,
+    firstCallUserId: data.first_call_user_id,
   };
 }
 

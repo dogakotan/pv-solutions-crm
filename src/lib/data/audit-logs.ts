@@ -136,6 +136,8 @@ export const AUDIT_ACTIONS = [
   "delete_offer_version",
   "offer_accept",
   "offer_reject",
+  "provision_partner_employee",
+  "provision_staff_user",
   "qualify_lead",
   "reactivate_lead",
   "record_sales_outcome",
@@ -174,4 +176,6 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   set_partner_rating: "Partner Puanı Değiştirildi",
   set_partner_status: "Partner Durumu Değiştirildi",
   update_sales_outcome_fulfillment: "Malzeme/ERP Durumu Güncellendi",
+  provision_partner_employee: "Partner Çalışanı Kaydedildi",
+  provision_staff_user: "Personel Kaydedildi",
 };

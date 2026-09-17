@@ -46,7 +46,7 @@ export default async function OfferDetailPage({
 
 async function RevisionsCard({ offerId }: { offerId: string }) {
   const supabase = await createClient();
-  const [versions, { dbRole }] = await Promise.all([
+  const [versions, { dbRole, user }] = await Promise.all([
     getOfferVersions(supabase, offerId),
     getCurrentUserRole(),
   ]);
@@ -64,7 +64,9 @@ async function RevisionsCard({ offerId }: { offerId: string }) {
               key={version.id}
               version={version}
               excelHref={`/offers/${offerId}/versions/${version.id}/excel`}
-              canDelete={dbRole === "pv_admin" || dbRole === "pv_sales"}
+              // delete_offer_version RPC'si yalnızca pv_admin VEYA revizyonu
+              // OLUŞTURAN sales'e izin veriyor (altıncı tur inceleme).
+              canDelete={dbRole === "pv_admin" || (dbRole === "pv_sales" && version.createdBy === user.id)}
               deleteAction={deleteOfferVersion}
               canRespond={dbRole === "partner_admin"}
               respondAction={respondToOffer}

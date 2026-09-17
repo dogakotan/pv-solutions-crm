@@ -54,7 +54,7 @@ export default async function LeadDetailPage({
   // Partner tarafı kendi maskelenmiş görünümlerini (assigned-leads,
   // site-visits) kullanır — leads tablosunun tüm kolonlarını (internal_notes,
   // phone, address) partnere doğrudan açmamak için burada engellenir.
-  const { appRole } = await requireRole(["admin", "first_call", "sales"]);
+  const { appRole, user } = await requireRole(["admin", "first_call", "sales"]);
 
   // offers_insert RLS'i yalnızca pv_admin veya lead'i sahiplenen pv_sales'e
   // izin veriyor — first_call için teklif geçmişi salt-okunur.
@@ -67,11 +67,6 @@ export default async function LeadDetailPage({
   // stage dışındaki alanlar için zaten farklı bir yoldan izin veriyor).
   const canAssignPartner = appRole === "admin" || appRole === "sales";
   const canAdvanceStage = canAssignPartner;
-
-  // Nitelendirme alanlarını (puan, ilgi, teknik detay) yalnızca lead'i
-  // arayan first_call ve pv_admin düzenleyebilir — sales için salt-okunur
-  // "Teknik Detaylar" kartı gösterilir.
-  const canQualifyLead = appRole === "first_call" || appRole === "admin";
 
   const supabase = await createClient();
 
@@ -93,6 +88,17 @@ export default async function LeadDetailPage({
   }
 
   const nextStage = NEXT_STAGE[lead.stage];
+
+  // Nitelendirme alanlarını (puan, ilgi, teknik detay) yalnızca lead'i
+  // arayan first_call ve pv_admin düzenleyebilir — sales için salt-okunur
+  // "Teknik Detaylar" kartı gösterilir. first_call için ayrıca lead'in
+  // kendisine ait olması gerekiyor (leads_update_pv RLS'inin uyguladığı
+  // kural) — aksi halde havuzdaki sahiplenilmemiş bir lead'de formu
+  // doldurup gönderince RLS sessizce reddediyor ve "Lead bulunamadı" gibi
+  // kafa karıştırıcı bir hata görünüyordu (altıncı tur inceleme).
+  const isUnclaimedByFirstCall =
+    appRole === "first_call" && lead.createdBy !== user.id && lead.firstCallUserId !== user.id;
+  const canQualifyLead = (appRole === "first_call" || appRole === "admin") && !isUnclaimedByFirstCall;
 
   return (
     <div className="flex flex-col gap-6">
@@ -173,6 +179,12 @@ export default async function LeadDetailPage({
         ) : (
           <div className={CARD_CLASS}>
             <h2 className="mb-4 text-sm font-medium text-foreground">Teknik Detaylar</h2>
+            {isUnclaimedByFirstCall && (
+              <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                Bu lead henüz sizin tarafınızdan sahiplenilmedi. Görüşme sonucunu girebilmek için önce lead havuzundan
+                &ldquo;Bana Ata&rdquo; ile sahiplenin.
+              </p>
+            )}
             <dl className="flex flex-col gap-3 text-sm">
               <div className="flex justify-between gap-4">
                 <dt className="text-muted">Bina Tipi</dt>
@@ -211,7 +223,7 @@ export default async function LeadDetailPage({
         )}
 
         <Suspense fallback={<CardSkeleton lines={3} />}>
-          <TeklifGecmisiCard leadId={lead.id} canManageOffers={canManageOffers} />
+          <TeklifGecmisiCard leadId={lead.id} canManageOffers={canManageOffers} appRole={appRole} userId={user.id} />
         </Suspense>
       </div>
 
@@ -328,9 +340,13 @@ async function PartnerAtamaCard({
 async function TeklifGecmisiCard({
   leadId,
   canManageOffers,
+  appRole,
+  userId,
 }: {
   leadId: string;
   canManageOffers: boolean;
+  appRole: AppRole;
+  userId: string;
 }) {
   const supabase = await createClient();
   const [offerHistory, activeReferral] = await Promise.all([
@@ -350,7 +366,11 @@ async function TeklifGecmisiCard({
                 key={version.id}
                 version={version}
                 excelHref={`/offers/${offerHistory.offerId}/versions/${version.id}/excel`}
-                canDelete={canManageOffers}
+                // delete_offer_version RPC'si yalnızca pv_admin VEYA revizyonu
+                // OLUŞTURAN sales'e izin veriyor — canManageOffers (revize/
+                // teklif oluşturma yetkisi) burada kasıtlı olarak kullanılmıyor,
+                // silme daha dar bir kural (altıncı tur inceleme).
+                canDelete={appRole === "admin" || (appRole === "sales" && version.createdBy === userId)}
                 deleteAction={deleteOfferVersion}
                 hiddenFields={{
                   leadId,

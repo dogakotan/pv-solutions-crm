@@ -34,6 +34,7 @@ export type OfferVersionItem = {
   shippingTerms: string | null;
   status: OfferVersionStatus;
   createdAt: string;
+  createdBy: string;
   items: OfferLineItem[];
 };
 
@@ -198,6 +199,7 @@ type OfferHistoryVersionRow = {
   shipping_terms: string | null;
   status: OfferVersionStatus;
   created_at: string;
+  created_by: string;
   items: {
     id: string;
     product_code: string | null;
@@ -231,6 +233,7 @@ export async function getOfferHistoryForLead(
       shippingTerms: v.shipping_terms,
       status: v.status,
       createdAt: v.created_at,
+      createdBy: v.created_by,
       items: v.items.map((item) => ({
         id: item.id,
         productCode: item.product_code,
@@ -246,7 +249,7 @@ export async function getOfferVersions(supabase: TypedSupabaseClient, offerId: s
   const { data, error } = await supabase
     .from("offer_versions")
     .select(
-      "id, revision_no, amount, currency, vat_included, valid_until, scope_summary, payment_method, shipping_terms, status, created_at, offer_version_items(id, product_code, product_name, quantity, unit_price, sort_order)"
+      "id, revision_no, amount, currency, vat_included, valid_until, scope_summary, payment_method, shipping_terms, status, created_at, created_by, offer_version_items(id, product_code, product_name, quantity, unit_price, sort_order)"
     )
     .eq("offer_id", offerId)
     .order("revision_no", { ascending: false });
@@ -265,6 +268,7 @@ export async function getOfferVersions(supabase: TypedSupabaseClient, offerId: s
     shippingTerms: row.shipping_terms,
     status: row.status as OfferVersionStatus,
     createdAt: row.created_at,
+    createdBy: row.created_by,
     items: [...row.offer_version_items]
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((item) => ({
@@ -294,7 +298,7 @@ export async function getOfferVersionForExport(
   const { data, error } = await supabase
     .from("offer_versions")
     .select(
-      "id, revision_no, amount, currency, vat_included, valid_until, scope_summary, payment_method, shipping_terms, status, created_at, offer_version_items(id, product_code, product_name, quantity, unit_price, sort_order), offers!inner(offer_no, leads(customer_name))"
+      "id, revision_no, amount, currency, vat_included, valid_until, scope_summary, payment_method, shipping_terms, status, created_at, created_by, offer_version_items(id, product_code, product_name, quantity, unit_price, sort_order), offers!inner(offer_no, leads(customer_name))"
     )
     .eq("id", offerVersionId)
     .maybeSingle();
@@ -325,6 +329,7 @@ export async function getOfferVersionForExport(
     shippingTerms: data.shipping_terms,
     status: data.status as OfferVersionStatus,
     createdAt: data.created_at,
+    createdBy: data.created_by,
     items: [...data.offer_version_items]
       .sort((a, b) => a.sort_order - b.sort_order)
       .map((item) => ({

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loginAs } from "./helpers/auth";
 import { getCredentials } from "./helpers/credentials";
+import { createTestLead, deleteLead, findUserIdByEmail, hasCleanupCredentials } from "./helpers/cleanup";
 
 const ERROR_BOUNDARY_TEXT = "Bir şeyler ters gitti";
 
@@ -57,17 +58,36 @@ test.describe("first_call sayfaları", () => {
   });
 
   test("/first-call/lead-pool sekmeleri arasında geçiş yapılabilir", async ({ page }) => {
-    await loginAs(page, email!, password!);
-    await page.goto("/first-call/lead-pool");
+    test.skip(!hasCleanupCredentials(), "SUPABASE_SERVICE_ROLE_KEY tanımlı değil");
 
-    await expect(page.getByRole("heading", { name: "Lead Havuzu", level: 1 })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Havuzdaki Yeni Leadler" })).toBeVisible();
+    // LeadsTable, leads.length === 0 olduğunda arama kutusunu hiç render etmiyor
+    // (bkz. src/components/leads-table.tsx) — "Takip Ettiklerim" sekmesi paylaşılan
+    // first_call hesabının o anki organik verisine bağlıydı ve CI'da hesabın hiç
+    // "new" dışı aşamada lead'i olmadığı anlar arama kutusunun asla görünmemesine
+    // (zaman aşımı değil, veri eksikliği) yol açıyordu. Artık sekmenin dolu
+    // olacağı garanti ediliyor.
+    const firstCallUserId = await findUserIdByEmail(email!);
+    expect(firstCallUserId).not.toBeNull();
+    const leadId = await createTestLead({
+      customerName: `E2E LeadPool Takip ${Date.now()}`,
+      ownerId: firstCallUserId!,
+      firstCallUserId,
+      stage: "contacted",
+    });
 
-    await page.getByRole("button", { name: "Takip Ettiklerim" }).click();
-    // Sekme, kendi verisini istemci tarafında çekiyor — 3 worker'ın eşzamanlı
-    // sunucu yükü altında varsayılan 5sn bazen yetmiyor.
-    await expect(page.getByPlaceholder("Müşteri, lead no veya şehir ara...")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
+    try {
+      await loginAs(page, email!, password!);
+      await page.goto("/first-call/lead-pool");
+
+      await expect(page.getByRole("heading", { name: "Lead Havuzu", level: 1 })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Havuzdaki Yeni Leadler" })).toBeVisible();
+
+      await page.getByRole("button", { name: "Takip Ettiklerim" }).click();
+      await expect(page.getByPlaceholder("Müşteri, lead no veya şehir ara...")).toBeVisible();
+      await expect(page.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
+    } finally {
+      await deleteLead(leadId);
+    }
   });
 
   test("/first-call/assignments hata sınırına düşmeden yüklenir", async ({ page }) => {

@@ -52,33 +52,40 @@ test.describe("Server Action hata mesajları production'da doğru gösteriliyor"
     browser,
   }) => {
     const customerName = `E2E ActionError Offer ${Date.now()}`;
+    let leadId: string | null = null;
+    let partnerContext: Awaited<ReturnType<typeof browser.newContext>> | null = null;
 
-    await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);
-    await createLeadViaUi(page, customerName);
-    const leadId = await findLeadIdByCustomerName(customerName);
-    expect(leadId).toBeTruthy();
-
-    const [adminId, partnerId] = await Promise.all([
-      findUserIdByEmail(TEST_EMAIL!),
-      findPartnerIdByEmail(PARTNER_ADMIN_TEST_EMAIL!),
-    ]);
-    expect(adminId).not.toBeNull();
-    expect(partnerId).not.toBeNull();
-    await createTestReferral({ leadId: leadId!, partnerId: partnerId!, referredBy: adminId! });
-
-    await page.goto(`/leads/${leadId}`);
-    await page.getByRole("button", { name: "Teklif Gönder" }).click();
-    await page.fill('input[name="amount"]', "10000");
-    await page.getByRole("button", { name: "Teklifi Gönder" }).click();
-    await expect(page.getByRole("button", { name: /Rev\.0/ })).toBeVisible({ timeout: 15_000 });
-
-    const offerId = await findOfferIdByLeadId(leadId!);
-    expect(offerId).toBeTruthy();
-
-    const partnerContext = await browser.newContext();
-    const partnerPage = await partnerContext.newPage();
-
+    // Dokuzuncu tur inceleme: deleteLead daha önce bu try/finally'nin
+    // DIŞINDAYDI — try bloğu içindeki (kasıtlı olarak yarış durumu test
+    // eden, zaman aşımına yatkın) bir assertion başarısız olursa lead hiç
+    // silinmeden kalıcı olarak sızıyordu. Artık lead oluşturulduğu andan
+    // itibaren tüm akış tek bir try/finally içinde.
     try {
+      await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);
+      await createLeadViaUi(page, customerName);
+      leadId = await findLeadIdByCustomerName(customerName);
+      expect(leadId).toBeTruthy();
+
+      const [adminId, partnerId] = await Promise.all([
+        findUserIdByEmail(TEST_EMAIL!),
+        findPartnerIdByEmail(PARTNER_ADMIN_TEST_EMAIL!),
+      ]);
+      expect(adminId).not.toBeNull();
+      expect(partnerId).not.toBeNull();
+      await createTestReferral({ leadId: leadId!, partnerId: partnerId!, referredBy: adminId! });
+
+      await page.goto(`/leads/${leadId}`);
+      await page.getByRole("button", { name: "Teklif Gönder" }).click();
+      await page.fill('input[name="amount"]', "10000");
+      await page.getByRole("button", { name: "Teklifi Gönder" }).click();
+      await expect(page.getByRole("button", { name: /Rev\.0/ })).toBeVisible({ timeout: 15_000 });
+
+      const offerId = await findOfferIdByLeadId(leadId!);
+      expect(offerId).toBeTruthy();
+
+      partnerContext = await browser.newContext();
+      const partnerPage = await partnerContext.newPage();
+
       await loginAs(partnerPage, PARTNER_ADMIN_TEST_EMAIL!, PARTNER_ADMIN_TEST_PASSWORD!);
       await partnerPage.goto(`/offers/${offerId}`);
       await partnerPage.getByRole("button", { name: /Rev\.0/ }).click();
@@ -105,10 +112,9 @@ test.describe("Server Action hata mesajları production'da doğru gösteriliyor"
       await expect(partnerPage.getByText("Bir şeyler ters gitti")).toHaveCount(0);
       await expect(partnerPage.getByText(/Minified React error/)).toHaveCount(0);
     } finally {
-      await partnerContext.close();
+      if (partnerContext) await partnerContext.close();
+      if (leadId) await deleteLead(leadId);
     }
-
-    await deleteLead(leadId!);
   });
 
   // assignPartner/reactivateLead de aynı paylaşılan ActionForm bileşenini

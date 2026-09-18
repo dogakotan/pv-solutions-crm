@@ -181,11 +181,12 @@ export type LeadOfferHistory = {
 };
 
 /**
- * Lead detay sayfasındaki "Teklif Geçmişi" kartı için — bu lead'in
- * (varsa) tek teklifini ve tüm revizyonlarını döner. Şu an bir lead
- * için en fazla bir `offers` satırı açılan iş akışı var (revizyonlar
- * offer_versions'a yeni satır olarak eklenir); birden fazla teklif
- * açılırsa en eskisi kullanılır.
+ * Lead detay sayfasındaki "Teklif Geçmişi" kartı için — bu lead'in en son
+ * (en güncel) `offers` satırını ve tüm revizyonlarını döner. Bir lead lost→
+ * reactivate→yeniden referral döngüsünden geçip birden fazla offers satırına
+ * sahip olabilir (bkz. create_offer'ın offer_no çakışma-sufiksi) — dokuzuncu
+ * tur inceleme, en eski offer'ın döndürülmesi eski/kapanmış partnere bağlı
+ * bir teklifin gösterilmesine yol açıyordu.
  */
 type OfferHistoryVersionRow = {
   id: string;

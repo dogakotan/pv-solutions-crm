@@ -193,16 +193,17 @@ export async function findPartnerIdByEmail(email: string): Promise<string | null
   return data?.partner_id ?? null;
 }
 
+// general_notes, internal_notes ile aynı gerekçeyle ayrı bir PV-only
+// tabloya (lead_general_notes) taşındı — dokuzuncu tur inceleme.
 export async function getLeadQualificationForTest(
   leadId: string
 ): Promise<{ buildingType: string | null; generalNotes: string | null } | null> {
-  const { data, error } = await adminClient()
-    .from("leads")
-    .select("building_type, general_notes")
-    .eq("id", leadId)
-    .maybeSingle();
+  const [{ data, error }, { data: noteRow }] = await Promise.all([
+    adminClient().from("leads").select("building_type").eq("id", leadId).maybeSingle(),
+    adminClient().from("lead_general_notes").select("note").eq("lead_id", leadId).maybeSingle(),
+  ]);
   if (error) throw error;
-  return data ? { buildingType: data.building_type, generalNotes: data.general_notes } : null;
+  return data ? { buildingType: data.building_type, generalNotes: noteRow?.note ?? null } : null;
 }
 
 export async function setLeadScoreForTest(leadId: string, score: string): Promise<void> {

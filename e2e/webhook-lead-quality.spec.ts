@@ -161,4 +161,58 @@ test.describe("Webhook lead veri kalitesi (create_lead_from_webhook)", () => {
       await deleteLead(closedLeadId!);
     }
   });
+
+  // Dokuzuncu tur inceleme, kritik bulgu: normalize_tr_phone rakamsız bir
+  // girdiyi ('N/A' gibi) boş string'e düşürüyordu — bu da alternate_phone'u
+  // hiç doldurulmamış (NULL, dolayısıyla normalize sonrası yine '') HER
+  // açık lead ile "aynı telefon" sayılıp gerçek lead hiç oluşturulmadan
+  // rastgele bir başka lead'e yönlendiriliyordu. Burada önce alakasız,
+  // açık bir "kurban" lead oluşturulup rakamsız bir telefonla webhook
+  // isteği gönderiliyor — istek reddedilmeli, kurban lead'e hiçbir şey
+  // olmamalı.
+  test("rakam içermeyen bir telefonla webhook isteği reddediliyor, rastgele bir lead'e eşleşmiyor", async ({
+    request,
+  }) => {
+    const victimRef = `e2e-junk-victim-${Date.now()}`;
+    const victimRes = await request.post("/api/webhooks/google-leads", {
+      data: {
+        lead_id: victimRef,
+        google_key: webhookKey,
+        is_test: false,
+        user_column_data: [
+          { column_id: "FULL_NAME", string_value: "E2E Kurban Lead" },
+          { column_id: "PHONE_NUMBER", string_value: "05556665544" },
+          { column_id: "CITY", string_value: "İstanbul" },
+        ],
+      },
+      headers: { "x-forwarded-for": SYNTHETIC_IP },
+    });
+    expect(victimRes.status()).toBe(200);
+    const victimLeadId = await findLeadIdByExternalRef(victimRef);
+    expect(victimLeadId).not.toBeNull();
+
+    try {
+      const junkRef = `e2e-junk-phone-${Date.now()}`;
+      const junkRes = await request.post("/api/webhooks/google-leads", {
+        data: {
+          lead_id: junkRef,
+          google_key: webhookKey,
+          is_test: false,
+          user_column_data: [
+            { column_id: "FULL_NAME", string_value: "E2E Rakamsız Telefon" },
+            { column_id: "PHONE_NUMBER", string_value: "N/A" },
+            { column_id: "CITY", string_value: "İstanbul" },
+          ],
+        },
+        headers: { "x-forwarded-for": SYNTHETIC_IP },
+      });
+      expect(junkRes.status()).toBe(500);
+      expect(await findLeadIdByExternalRef(junkRef)).toBeNull();
+
+      const { phone } = await getLeadPhoneAndPayload(victimLeadId!);
+      expect(phone).toBe("05556665544");
+    } finally {
+      await deleteLead(victimLeadId!);
+    }
+  });
 });

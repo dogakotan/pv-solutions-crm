@@ -98,7 +98,7 @@ const LEAD_DETAIL_SELECT = `
   city, district, address, building_type, roof_area_m2, estimated_capacity_kwp,
   pool_interest, heat_pump_interest, ev_interest, battery_interest,
   competitor_offer_status, competitor_offer_note,
-  stage, lead_score, next_follow_up_at, general_notes,
+  stage, lead_score, next_follow_up_at,
   created_by, first_call_user_id,
   owner:profiles!leads_owner_id_fkey(full_name)
 `;
@@ -113,6 +113,15 @@ export async function getLeadById(supabase: TypedSupabaseClient, id: string): Pr
 
   if (error) throw error;
   if (!data) return null;
+
+  // general_notes, internal_notes ile birebir aynı gerekçeyle (partner'ın
+  // Next.js UI'ı atlayıp doğrudan PostgREST'e sorgu atmasıyla okunabilmesi)
+  // ayrı bir PV-only tabloya taşındı — dokuzuncu tur inceleme.
+  const { data: noteRow } = await supabase
+    .from("lead_general_notes")
+    .select("note")
+    .eq("lead_id", id)
+    .maybeSingle();
 
   return {
     id: data.id,
@@ -135,7 +144,7 @@ export async function getLeadById(supabase: TypedSupabaseClient, id: string): Pr
     stage: data.stage as LeadStage,
     leadScore: data.lead_score as LeadScore | null,
     nextFollowUpAt: data.next_follow_up_at,
-    generalNotes: data.general_notes,
+    generalNotes: noteRow?.note ?? null,
     ownerName: extractName(data.owner as NameEmbed) ?? "—",
     createdBy: data.created_by,
     firstCallUserId: data.first_call_user_id,

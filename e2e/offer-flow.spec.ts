@@ -24,7 +24,11 @@ test.describe("teklif gönderme ve revize etme (create_offer / revise_offer RPC)
   );
 
   test("teklif gönderilir, revize edilince eski revizyon 'Eski Revizyon' olur", async ({ page }) => {
-    const customerName = `E2E-${Date.now()}`;
+    // Dokuzuncu tur inceleme: lead-creation.spec.ts de aynı çıplak
+    // `E2E-${Date.now()}` kalıbını kullanıyordu — iki paralel worker'ın bu
+    // iki testi aynı milisaniyede başlatması durumunda aynı customer_name'i
+    // üretip findLeadIdByCustomerName'in .maybeSingle()'ını çökertebiliyordu.
+    const customerName = `E2E-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
 
     try {
       await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);
@@ -283,6 +287,72 @@ test.describe("teklif kabul/red (respond_to_offer RPC)", () => {
       await page.reload();
       await expect(page.getByText("En son revizyon kabul edildi")).toBeVisible({ timeout: 10_000 });
       await expect(page.getByRole("button", { name: "Revize Et" })).toHaveCount(0);
+    } finally {
+      const leadId = await findLeadIdByCustomerName(customerName);
+      if (leadId) await deleteLead(leadId);
+    }
+  });
+
+  // Dokuzuncu tur inceleme, yüksek bulgu: respond_to_offer, lead soft-delete
+  // edildikten sonra da partner'ın elindeki eski offer_version_id ile kabul/
+  // red yapabilmesine izin veriyordu — soft-delete kilidinin bypass'ı.
+  test("lead soft-silindikten sonra partner teklifi yanıtlayamıyor", async ({ page, browser }) => {
+    const customerName = `E2E-SoftDeleteOffer-${Date.now()}`;
+
+    try {
+      await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);
+      await createLeadViaUi(page, customerName);
+      const leadId = await findLeadIdByCustomerName(customerName);
+      expect(leadId).toBeTruthy();
+
+      const [adminId, partnerId] = await Promise.all([
+        findUserIdByEmail(TEST_EMAIL!),
+        findPartnerIdByEmail(PARTNER_ADMIN_TEST_EMAIL!),
+      ]);
+      expect(adminId).not.toBeNull();
+      expect(partnerId).not.toBeNull();
+      await createTestReferral({ leadId: leadId!, partnerId: partnerId!, referredBy: adminId! });
+
+      await page.goto(`/leads/${leadId}`);
+      await page.getByRole("button", { name: "Teklif Gönder" }).click();
+      await page.fill('input[name="amount"]', "10000");
+      await page.getByRole("button", { name: "Teklifi Gönder" }).click();
+      await expect(page.getByRole("button", { name: /Rev\.0/ })).toBeVisible({ timeout: 15_000 });
+
+      const offerId = await findOfferIdByLeadId(leadId!);
+      expect(offerId).toBeTruthy();
+
+      // Gerçek sızıntı senaryosu: partner, silme İŞLEMİNDEN ÖNCE teklif
+      // sayfasını zaten açmış durumda (sekmesi hâlâ açık) — respond_to_offer
+      // SECURITY DEFINER olduğundan RLS'i bypass ediyor, bu yüzden asıl
+      // korumanın RPC'nin KENDİ kontrolünde olması gerekiyor. Bu yüzden
+      // partner sayfası soft-delete'TEN ÖNCE açılıp yeniden yüklenmeden
+      // "Kabul Et"e tıklanıyor — fresh bir navigasyon zaten RLS'in kendisi
+      // tarafından engellenir (sayfa 404 döner), o farklı ve zaten kapalı
+      // bir yol.
+      const adminPartnerContext = await browser.newContext();
+      const adminPartnerPage = await adminPartnerContext.newPage();
+      await loginAs(adminPartnerPage, PARTNER_ADMIN_TEST_EMAIL!, PARTNER_ADMIN_TEST_PASSWORD!);
+      await adminPartnerPage.goto(`/offers/${offerId}`);
+      await adminPartnerPage.getByRole("button", { name: /Rev\.0/ }).click();
+      await expect(adminPartnerPage.getByRole("button", { name: "Kabul Et" })).toBeVisible();
+
+      // protect_lead_privileged_columns trigger'ı gereği deleted_at yalnızca
+      // soft_delete_lead RPC'si (veya pv_admin) üzerinden set edilebiliyor —
+      // aynı admin oturumundan UI'daki gerçek "Sil" akışı kullanılıyor.
+      await page.goto(`/leads/${leadId}`);
+      await page.getByRole("button", { name: "Lead'i Sil" }).click();
+      await page.fill('textarea[name="reason"]', "E2E soft-delete sonrası offer yanıt testi");
+      await page.getByRole("button", { name: "Evet, sil" }).click();
+      await page.waitForURL(/\/leads$/, { timeout: 10_000 });
+
+      await adminPartnerPage.getByRole("button", { name: "Kabul Et" }).click();
+      await expect(adminPartnerPage.getByText("Bu teklifi yanıtlama yetkiniz yok")).toBeVisible({
+        timeout: 10_000,
+      });
+      await adminPartnerContext.close();
+
+      expect(await getOfferStatus(offerId!)).toBe("open");
     } finally {
       const leadId = await findLeadIdByCustomerName(customerName);
       if (leadId) await deleteLead(leadId);

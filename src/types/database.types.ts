@@ -149,6 +149,42 @@ export type Database = {
         }
         Relationships: []
       }
+      lead_general_notes: {
+        Row: {
+          lead_id: string
+          note: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          lead_id: string
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          lead_id?: string
+          note?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_general_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_general_notes_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_internal_notes: {
         Row: {
           lead_id: string
@@ -269,7 +305,6 @@ export type Database = {
           ev_interest: string | null
           external_ref: string | null
           first_call_user_id: string | null
-          general_notes: string | null
           heat_pump_interest: string | null
           id: string
           lead_no: string | null
@@ -306,7 +341,6 @@ export type Database = {
           ev_interest?: string | null
           external_ref?: string | null
           first_call_user_id?: string | null
-          general_notes?: string | null
           heat_pump_interest?: string | null
           id?: string
           lead_no?: string | null
@@ -343,7 +377,6 @@ export type Database = {
           ev_interest?: string | null
           external_ref?: string | null
           first_call_user_id?: string | null
-          general_notes?: string | null
           heat_pump_interest?: string | null
           id?: string
           lead_no?: string | null
@@ -1060,7 +1093,6 @@ export type Database = {
           ev_interest: string | null
           external_ref: string | null
           first_call_user_id: string | null
-          general_notes: string | null
           heat_pump_interest: string | null
           id: string
           lead_no: string | null
@@ -1138,7 +1170,6 @@ export type Database = {
           ev_interest: string | null
           external_ref: string | null
           first_call_user_id: string | null
-          general_notes: string | null
           heat_pump_interest: string | null
           id: string
           lead_no: string | null
@@ -1216,7 +1247,6 @@ export type Database = {
           ev_interest: string | null
           external_ref: string | null
           first_call_user_id: string | null
-          general_notes: string | null
           heat_pump_interest: string | null
           id: string
           lead_no: string | null
@@ -1262,7 +1292,6 @@ export type Database = {
           ev_interest: string | null
           external_ref: string | null
           first_call_user_id: string | null
-          general_notes: string | null
           heat_pump_interest: string | null
           id: string
           lead_no: string | null
@@ -1351,7 +1380,6 @@ export type Database = {
           ev_interest: string | null
           external_ref: string | null
           first_call_user_id: string | null
-          general_notes: string | null
           heat_pump_interest: string | null
           id: string
           lead_no: string | null
@@ -1404,7 +1432,6 @@ export type Database = {
           ev_interest: string | null
           external_ref: string | null
           first_call_user_id: string | null
-          general_notes: string | null
           heat_pump_interest: string | null
           id: string
           lead_no: string | null
@@ -1857,7 +1884,6 @@ export type Database = {
           ev_interest: string | null
           external_ref: string | null
           first_call_user_id: string | null
-          general_notes: string | null
           heat_pump_interest: string | null
           id: string
           lead_no: string | null
@@ -1903,7 +1929,6 @@ export type Database = {
           ev_interest: string | null
           external_ref: string | null
           first_call_user_id: string | null
-          general_notes: string | null
           heat_pump_interest: string | null
           id: string
           lead_no: string | null

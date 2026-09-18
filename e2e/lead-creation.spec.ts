@@ -18,7 +18,12 @@ test.describe("lead oluşturma (create_lead RPC)", () => {
   );
 
   test("formu doldurup gönderince lead havuzunda görünür", async ({ page }) => {
-    const customerName = `E2E-${Date.now()}`;
+    // Dokuzuncu tur inceleme: yalnızca Date.now() bazlı isim, iki paralel
+    // worker'ın testi aynı milisaniyede başlatması durumunda
+    // findLeadIdByCustomerName'in .maybeSingle()'ını "birden fazla satır"
+    // hatasıyla çökertebiliyordu (ve bu hata finally'nin İÇİNDE oluşursa
+    // lead hiç silinmeden sızabiliyordu). Rastgele bir sufiks eklendi.
+    const customerName = `E2E-${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
 
     try {
       await loginAs(page, TEST_EMAIL!, TEST_PASSWORD!);

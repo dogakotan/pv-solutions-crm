@@ -1,0 +1,110 @@
+-- Dokuzuncu tur inceleme, kritik bulgu: normalize_tr_phone, sayı içermeyen
+-- (ör. "N/A", "-", "Belirtilmedi") bir telefon girdisini boş string'e
+-- (''::text) düşürüyordu. alternate_phone hiç doldurulmamış (NULL) her
+-- lead için de normalize_tr_phone(NULL) = '' döndüğünden, create_lead_from_webhook'un
+-- duplicate kontrolü ''='' eşleşmesiyle sistemdeki NEREDEYSE HER açık lead'i
+-- "duplicate" sayıp gerçek lead'i asla oluşturmadan en son oluşturulmuş
+-- rastgele bir lead'e yönlendiriyordu (sessiz veri kaybı + yanlış bildirim).
+-- Artık hiç rakam içermeyen bir girdi NULL döndürüyor; create_lead_from_webhook
+-- bu durumu boş telefonla aynı şekilde (açık hata) reddediyor.
+create or replace function private.normalize_tr_phone(p_phone text)
+returns text
+language sql
+immutable
+set search_path = pg_catalog, public
+as $$
+  select case
+    when digits ~ '^90\d{10}$' then '0' || substring(digits from 3)
+    when digits ~ '^0\d{10}$' then digits
+    when digits ~ '^\d{10}$' then '0' || digits
+    when digits = '' then null
+    else digits
+  end
+  from (select regexp_replace(coalesce(p_phone, ''), '\D', '', 'g') as digits) s;
+$$;
+
+revoke execute on function private.normalize_tr_phone(text) from public;
+
+create or replace function public.create_lead_from_webhook(
+  p_customer_name text,
+  p_phone text,
+  p_city text,
+  p_source text,
+  p_external_ref text default null::text,
+  p_raw_payload jsonb default null::jsonb
+)
+returns leads
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+declare
+  v_system_user_id uuid;
+  v_lead public.leads;
+  v_normalized_phone text;
+  v_existing_id uuid;
+begin
+  if p_external_ref is not null then
+    select * into v_lead from public.leads where external_ref = p_external_ref;
+    if found then
+      return v_lead;
+    end if;
+  end if;
+
+  if nullif(trim(coalesce(p_phone, '')), '') is null then
+    raise exception 'Telefon numarası boş — lead oluşturulamadı';
+  end if;
+
+  v_normalized_phone := private.normalize_tr_phone(p_phone);
+
+  if v_normalized_phone is null then
+    raise exception 'Telefon numarası geçersiz — lead oluşturulamadı';
+  end if;
+
+  select id into v_existing_id
+  from public.leads
+  where deleted_at is null
+    and stage not in ('won', 'lost', 'sale_registered')
+    and (private.normalize_tr_phone(phone) = v_normalized_phone
+         or private.normalize_tr_phone(alternate_phone) = v_normalized_phone)
+  order by created_at desc
+  limit 1;
+
+  if v_existing_id is not null then
+    perform private.notify_admins_webhook_lead_duplicate(p_source, p_external_ref, v_normalized_phone, v_existing_id);
+    select * into v_lead from public.leads where id = v_existing_id;
+    return v_lead;
+  end if;
+
+  select id into v_system_user_id
+  from public.profiles
+  where email = 'system-integrations@pvsolutionstr.com';
+
+  if v_system_user_id is null then
+    raise exception 'Sistem entegrasyon profili bulunamadı (system-integrations@pvsolutionstr.com)';
+  end if;
+
+  insert into public.leads (
+    customer_type, customer_name, phone, city, source, external_ref,
+    owner_id, created_by, first_call_user_id, webhook_raw_payload
+  ) values (
+    'individual', p_customer_name, v_normalized_phone, coalesce(nullif(trim(p_city), ''), 'Bilinmiyor'), p_source, p_external_ref,
+    v_system_user_id, v_system_user_id, null, p_raw_payload
+  )
+  returning * into v_lead;
+
+  perform private.write_audit_log(
+    'create_lead_from_webhook', 'leads', v_lead.id,
+    null,
+    jsonb_build_object('customer_name', p_customer_name, 'source', p_source, 'external_ref', p_external_ref),
+    null
+  );
+
+  return v_lead;
+end;
+$function$;
+
+revoke execute on function public.create_lead_from_webhook(text, text, text, text, text, jsonb) from public;
+revoke execute on function public.create_lead_from_webhook(text, text, text, text, text, jsonb) from anon;
+revoke execute on function public.create_lead_from_webhook(text, text, text, text, text, jsonb) from authenticated;
+grant execute on function public.create_lead_from_webhook(text, text, text, text, text, jsonb) to service_role;

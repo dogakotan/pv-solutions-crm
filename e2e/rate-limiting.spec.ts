@@ -8,10 +8,16 @@ import { test, expect } from "@playwright/test";
  * kullanması önemli — aksi halde bu testler diğer webhook testleriyle
  * (webhooks.spec.ts, webhook-failure-notification.spec.ts) aynı "unknown"
  * kovasını paylaşıp birbirini yanlışlıkla 429'a düşürebilir.
+ *
+ * Dokuzuncu tur inceleme: `Date.now() % 250` aralığı 0-249'du ve
+ * webhooks.spec.ts/webhook-failure-notification.spec.ts/
+ * webhook-lead-quality.spec.ts'in kendi kovalarını açık tutmak için
+ * güvendiği SABİT IP'lerle (.10/.20/.30) ~%1 ihtimalle çakışabiliyordu.
+ * Aralık bu sabitlerin üzerine (50-249) kaydırıldı.
  */
 test.describe("Webhook route'larında hız sınırlama (checkRateLimit)", () => {
   test("google-leads webhook'u dakikada 60 isteğin üzerinde 429 döner", async ({ request }) => {
-    const syntheticIp = `203.0.113.${Date.now() % 250}`;
+    const syntheticIp = `203.0.113.${50 + (Date.now() % 200)}`;
     const statuses: number[] = [];
 
     for (let i = 0; i < 65; i++) {
@@ -33,7 +39,7 @@ test.describe("Webhook route'larında hız sınırlama (checkRateLimit)", () => 
   });
 
   test("meta-leads webhook GET (hub verify) dakikada 20 isteğin üzerinde 429 döner", async ({ request }) => {
-    const syntheticIp = `203.0.113.${(Date.now() + 1) % 250}`;
+    const syntheticIp = `203.0.113.${50 + ((Date.now() + 1) % 200)}`;
     const statuses: number[] = [];
 
     for (let i = 0; i < 23; i++) {

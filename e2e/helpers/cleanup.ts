@@ -141,6 +141,28 @@ export async function deleteNotificationByDedupKey(dedupKey: string): Promise<vo
   if (error) throw error;
 }
 
+export async function getLeadPhoneAndPayload(
+  leadId: string
+): Promise<{ phone: string; webhookRawPayload: unknown }> {
+  const { data, error } = await adminClient()
+    .from("leads")
+    .select("phone, webhook_raw_payload")
+    .eq("id", leadId)
+    .single();
+  if (error) throw error;
+  return { phone: data.phone, webhookRawPayload: data.webhook_raw_payload };
+}
+
+// protect_lead_privileged_columns trigger'ı stage'i doğrudan UPDATE ile
+// değiştirmeyi normal client'lar için engelliyor — service-role bu
+// trigger'dan muaf, test amaçlı bir lead'i "kapanmış" duruma getirmek için
+// kullanılıyor (webhook duplicate kontrolünün won/lost/sale_registered
+// istisnasını doğrulamak amacıyla).
+export async function setLeadStageForTest(leadId: string, stage: string): Promise<void> {
+  const { error } = await adminClient().from("leads").update({ stage }).eq("id", leadId);
+  if (error) throw error;
+}
+
 export async function findOfferIdByLeadId(leadId: string): Promise<string | null> {
   const { data, error } = await adminClient()
     .from("offers")

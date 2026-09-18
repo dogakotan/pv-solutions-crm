@@ -284,6 +284,7 @@ export type Database = {
           source: string
           stage: string
           updated_at: string
+          webhook_raw_payload: Json | null
         }
         Insert: {
           address?: string | null
@@ -320,6 +321,7 @@ export type Database = {
           source: string
           stage?: string
           updated_at?: string
+          webhook_raw_payload?: Json | null
         }
         Update: {
           address?: string | null
@@ -356,6 +358,7 @@ export type Database = {
           source?: string
           stage?: string
           updated_at?: string
+          webhook_raw_payload?: Json | null
         }
         Relationships: [
           {
@@ -1072,6 +1075,7 @@ export type Database = {
           source: string
           stage: string
           updated_at: string
+          webhook_raw_payload: Json | null
         }
         SetofOptions: {
           from: "*"
@@ -1149,6 +1153,7 @@ export type Database = {
           source: string
           stage: string
           updated_at: string
+          webhook_raw_payload: Json | null
         }
         SetofOptions: {
           from: "*"
@@ -1226,6 +1231,7 @@ export type Database = {
           source: string
           stage: string
           updated_at: string
+          webhook_raw_payload: Json | null
         }[]
         SetofOptions: {
           from: "*"
@@ -1271,6 +1277,7 @@ export type Database = {
           source: string
           stage: string
           updated_at: string
+          webhook_raw_payload: Json | null
         }
         SetofOptions: {
           from: "*"
@@ -1359,6 +1366,7 @@ export type Database = {
           source: string
           stage: string
           updated_at: string
+          webhook_raw_payload: Json | null
         }
         SetofOptions: {
           from: "*"
@@ -1373,6 +1381,7 @@ export type Database = {
           p_customer_name: string
           p_external_ref?: string
           p_phone: string
+          p_raw_payload?: Json
           p_source: string
         }
         Returns: {
@@ -1410,6 +1419,7 @@ export type Database = {
           source: string
           stage: string
           updated_at: string
+          webhook_raw_payload: Json | null
         }
         SetofOptions: {
           from: "*"
@@ -1862,6 +1872,7 @@ export type Database = {
           source: string
           stage: string
           updated_at: string
+          webhook_raw_payload: Json | null
         }
         SetofOptions: {
           from: "*"
@@ -1907,6 +1918,7 @@ export type Database = {
           source: string
           stage: string
           updated_at: string
+          webhook_raw_payload: Json | null
         }
         SetofOptions: {
           from: "*"

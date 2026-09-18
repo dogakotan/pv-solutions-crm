@@ -31,7 +31,13 @@ test.describe("Webhook lead hatası bildirimi (notify_admins_webhook_lead_failur
     const signature = "sha256=" + createHmac("sha256", appSecret!).update(payload).digest("hex");
 
     const webhookRes = await request.post("/api/webhooks/meta-leads", {
-      headers: { "content-type": "application/json", "x-hub-signature-256": signature },
+      // Kendi sabit sentetik IP'si — webhooks.spec.ts / rate-limiting.spec.ts
+      // ile paylaşılan "unknown" kovasından izole (altıncı tur inceleme).
+      headers: {
+        "content-type": "application/json",
+        "x-hub-signature-256": signature,
+        "x-forwarded-for": "203.0.113.20",
+      },
       data: payload,
     });
     expect(webhookRes.status()).toBe(200);

@@ -108,6 +108,7 @@ export const NOTIFICATION_TYPES = [
   "sale_won",
   "sale_lost",
   "webhook_lead_failure",
+  "webhook_lead_duplicate",
 ] as const;
 
 export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
@@ -124,6 +125,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   sale_won: "Satış Kazanıldı",
   sale_lost: "Satış Kaybedildi",
   webhook_lead_failure: "Webhook Lead Hatası",
+  webhook_lead_duplicate: "Webhook Lead Tekrarı",
 };
 
 export async function getUnreadNotificationCount(supabase: TypedSupabaseClient): Promise<number> {

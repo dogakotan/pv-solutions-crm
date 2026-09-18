@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 
 type MetaLeadgenChange = {
   field: string;
-  value?: { leadgen_id?: string };
+  value?: { leadgen_id?: string; [key: string]: unknown };
 };
 
 type MetaWebhookPayload = {
@@ -108,16 +108,18 @@ export async function POST(request: Request) {
     return new NextResponse("Invalid payload", { status: 400, headers: { "x-correlation-id": logger.correlationId } });
   }
 
-  const leadgenIds = (payload.entry ?? [])
+  const leadgenChanges = (payload.entry ?? [])
     .flatMap((entry) => entry.changes ?? [])
-    .filter((change) => change.field === "leadgen")
-    .map((change) => change.value?.leadgen_id)
-    .filter((id): id is string => Boolean(id));
+    .filter(
+      (change): change is MetaLeadgenChange & { value: { leadgen_id: string } } =>
+        change.field === "leadgen" && Boolean(change.value?.leadgen_id)
+    );
 
-  logger.info("Meta webhook alındı", { leadgenCount: leadgenIds.length });
+  logger.info("Meta webhook alındı", { leadgenCount: leadgenChanges.length });
   const admin = createAdminClient();
 
-  for (const leadgenId of leadgenIds) {
+  for (const change of leadgenChanges) {
+    const leadgenId = change.value.leadgen_id;
     try {
       const fields = await fetchLeadFieldData(leadgenId, pageAccessToken);
       const customerName = fieldValue(fields, "full_name") ?? "İsimsiz (Meta Lead Ads)";
@@ -130,6 +132,7 @@ export async function POST(request: Request) {
         p_city: city,
         p_source: "Meta Lead Ads",
         p_external_ref: leadgenId,
+        p_raw_payload: { ...change.value, field_data: fields },
       });
 
       if (error) {

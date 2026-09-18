@@ -9,7 +9,15 @@ import { findLeadIdByExternalRef, deleteLead, hasCleanupCredentials } from "./he
  * test edilir (GET handshake, geçersiz imza) — geçerli bir imzayla devam
  * etmek gerçek graph.facebook.com'a istek atar, CI'da güvenilir/hızlı değil
  * ve gerçek kimlik bilgisi olmadan zaten başarısız olurdu.
+ *
+ * Altıncı tur inceleme: x-forwarded-for göndermeyen istekler checkRateLimit'in
+ * paylaşılan "unknown" IP kovasını kullanıyordu — rate-limiting.spec.ts'in
+ * kasıtlı olarak bu limiti aşmaya çalışan testleriyle (ve bu dosyanın kendi
+ * içindeki testleriyle) aynı kovayı paylaşıp suite büyüdükçe ilgisiz
+ * testleri yanlışlıkla 429'a düşürebilirdi. Bu dosyaya özel sabit bir
+ * sentetik IP kullanılıyor (rate-limiting.spec.ts'teki desenle aynı).
  */
+const SYNTHETIC_IP = "203.0.113.10";
 
 test.describe("Meta Lead Ads webhook (src/app/api/webhooks/meta-leads/route.ts)", () => {
   const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
@@ -19,7 +27,8 @@ test.describe("Meta Lead Ads webhook (src/app/api/webhooks/meta-leads/route.ts)"
 
   test("GET: doğru verify_token ile challenge'ı düz metin olarak döner", async ({ request }) => {
     const res = await request.get(
-      `/api/webhooks/meta-leads?hub.mode=subscribe&hub.verify_token=${verifyToken}&hub.challenge=abc123`
+      `/api/webhooks/meta-leads?hub.mode=subscribe&hub.verify_token=${verifyToken}&hub.challenge=abc123`,
+      { headers: { "x-forwarded-for": SYNTHETIC_IP } }
     );
     expect(res.status()).toBe(200);
     expect(await res.text()).toBe("abc123");
@@ -27,7 +36,8 @@ test.describe("Meta Lead Ads webhook (src/app/api/webhooks/meta-leads/route.ts)"
 
   test("GET: yanlış verify_token ile 403 döner", async ({ request }) => {
     const res = await request.get(
-      "/api/webhooks/meta-leads?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=abc123"
+      "/api/webhooks/meta-leads?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=abc123",
+      { headers: { "x-forwarded-for": SYNTHETIC_IP } }
     );
     expect(res.status()).toBe(403);
   });
@@ -36,7 +46,10 @@ test.describe("Meta Lead Ads webhook (src/app/api/webhooks/meta-leads/route.ts)"
     const body = JSON.stringify({ entry: [{ changes: [{ field: "leadgen", value: { leadgen_id: "fake" } }] }] });
     const res = await request.post("/api/webhooks/meta-leads", {
       data: body,
-      headers: { "x-hub-signature-256": "sha256=0000000000000000000000000000000000000000000000000000000000000000" },
+      headers: {
+        "x-hub-signature-256": "sha256=0000000000000000000000000000000000000000000000000000000000000000",
+        "x-forwarded-for": SYNTHETIC_IP,
+      },
     });
     expect(res.status()).toBe(401);
   });
@@ -44,17 +57,21 @@ test.describe("Meta Lead Ads webhook (src/app/api/webhooks/meta-leads/route.ts)"
   test("POST: imza header'ı hiç yoksa 401 döner", async ({ request }) => {
     const res = await request.post("/api/webhooks/meta-leads", {
       data: JSON.stringify({ entry: [] }),
+      headers: { "x-forwarded-for": SYNTHETIC_IP },
     });
     expect(res.status()).toBe(401);
   });
 
   test("POST: yanıt gelen x-correlation-id'yi korur (yoksa üretir)", async ({ request }) => {
-    const withoutId = await request.post("/api/webhooks/meta-leads", { data: JSON.stringify({ entry: [] }) });
+    const withoutId = await request.post("/api/webhooks/meta-leads", {
+      data: JSON.stringify({ entry: [] }),
+      headers: { "x-forwarded-for": SYNTHETIC_IP },
+    });
     expect(withoutId.headers()["x-correlation-id"]).toBeTruthy();
 
     const withId = await request.post("/api/webhooks/meta-leads", {
       data: JSON.stringify({ entry: [] }),
-      headers: { "x-correlation-id": "e2e-fixed-correlation-id" },
+      headers: { "x-correlation-id": "e2e-fixed-correlation-id", "x-forwarded-for": SYNTHETIC_IP },
     });
     expect(withId.headers()["x-correlation-id"]).toBe("e2e-fixed-correlation-id");
   });
@@ -69,6 +86,7 @@ test.describe("Google Ads Lead Form webhook (src/app/api/webhooks/google-leads/r
   test("POST: google_key eksikse 401 döner, lead oluşturulmaz", async ({ request }) => {
     const res = await request.post("/api/webhooks/google-leads", {
       data: { lead_id: "e2e-missing-key", user_column_data: [] },
+      headers: { "x-forwarded-for": SYNTHETIC_IP },
     });
     expect(res.status()).toBe(401);
     expect(await findLeadIdByExternalRef("e2e-missing-key")).toBeNull();
@@ -77,6 +95,7 @@ test.describe("Google Ads Lead Form webhook (src/app/api/webhooks/google-leads/r
   test("POST: yanlış google_key ile 401 döner", async ({ request }) => {
     const res = await request.post("/api/webhooks/google-leads", {
       data: { lead_id: "e2e-wrong-key", google_key: "wrong", user_column_data: [] },
+      headers: { "x-forwarded-for": SYNTHETIC_IP },
     });
     expect(res.status()).toBe(401);
     expect(await findLeadIdByExternalRef("e2e-wrong-key")).toBeNull();
@@ -86,6 +105,7 @@ test.describe("Google Ads Lead Form webhook (src/app/api/webhooks/google-leads/r
     const leadId = `e2e-is-test-${Date.now()}`;
     const res = await request.post("/api/webhooks/google-leads", {
       data: { lead_id: leadId, google_key: webhookKey, is_test: true, user_column_data: [] },
+      headers: { "x-forwarded-for": SYNTHETIC_IP },
     });
     expect(res.status()).toBe(200);
     expect(await findLeadIdByExternalRef(leadId)).toBeNull();
@@ -104,6 +124,7 @@ test.describe("Google Ads Lead Form webhook (src/app/api/webhooks/google-leads/r
         is_test: false,
         user_column_data: [{ column_id: "FULL_NAME", string_value: "Telefonsuz Test" }],
       },
+      headers: { "x-forwarded-for": SYNTHETIC_IP },
     });
     expect(res.status()).toBe(500);
     expect(await findLeadIdByExternalRef(externalRef)).toBeNull();
@@ -111,6 +132,11 @@ test.describe("Google Ads Lead Form webhook (src/app/api/webhooks/google-leads/r
 
   test("POST: geçerli payload ile paylaşımlı havuzda bir lead oluşturur (UTF-8 alanlar dahil)", async ({ request }) => {
     const externalRef = `e2e-valid-${Date.now()}`;
+    // Sabit bir telefon numarası, altıncı tur inceleme sırasında eklenen
+    // webhook duplicate kontrolüyle gerçek bir seed/demo lead'in
+    // (alternate_phone: 05551234567) çakışmasına yol açmıştı — zaman
+    // damgalı, benzersiz bir numara kullanılıyor.
+    const phone = `+90555${String(Date.now()).slice(-7)}`;
     const res = await request.post("/api/webhooks/google-leads", {
       data: {
         lead_id: externalRef,
@@ -118,10 +144,11 @@ test.describe("Google Ads Lead Form webhook (src/app/api/webhooks/google-leads/r
         is_test: false,
         user_column_data: [
           { column_id: "FULL_NAME", string_value: "E2E Ayşe Yılmaz" },
-          { column_id: "PHONE_NUMBER", string_value: "+905551234567" },
+          { column_id: "PHONE_NUMBER", string_value: phone },
           { column_id: "CITY", string_value: "İstanbul" },
         ],
       },
+      headers: { "x-forwarded-for": SYNTHETIC_IP },
     });
     expect(res.status()).toBe(200);
 
@@ -137,6 +164,7 @@ test.describe("Google Ads Lead Form webhook (src/app/api/webhooks/google-leads/r
           is_test: false,
           user_column_data: [{ column_id: "FULL_NAME", string_value: "E2E Ayşe Yılmaz" }],
         },
+        headers: { "x-forwarded-for": SYNTHETIC_IP },
       });
       expect(retryRes.status()).toBe(200);
     } finally {

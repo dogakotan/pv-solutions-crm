@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createLogger, correlationIdFromRequest } from "@/lib/logger";
+import type { Json } from "@/types/database.types";
 
 /**
  * Google Ads Lead Form webhook — Meta'nın aksine OAuth/imza gerektirmiyor,
@@ -98,6 +99,10 @@ export async function POST(request: Request) {
   const phone = columnValue(columns, "PHONE_NUMBER") ?? "";
   const city = columnValue(columns, "CITY") ?? "";
 
+  // google_key paylaşımlı bir sır olduğundan ham payload'a dahil edilmiyor.
+  const rawPayloadSafe: Record<string, unknown> = { ...payload };
+  delete rawPayloadSafe.google_key;
+
   const admin = createAdminClient();
   const { error } = await admin.rpc("create_lead_from_webhook", {
     p_customer_name: customerName,
@@ -105,6 +110,7 @@ export async function POST(request: Request) {
     p_city: city,
     p_source: "Google Ads Lead Form",
     p_external_ref: payload.lead_id,
+    p_raw_payload: rawPayloadSafe as Json,
   });
 
   if (error) {

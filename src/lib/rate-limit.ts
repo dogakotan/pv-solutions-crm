@@ -17,8 +17,16 @@ type Bucket = { count: number; resetAt: number };
 const buckets = new Map<string, Bucket>();
 
 function getClientIp(request: Request): string {
+  // Dokuzuncu tur inceleme: ilk (en soldaki) hop, isteği gönderen client'ın
+  // kendisi tarafından serbestçe eklenebilir ("x-forwarded-for: sahte-ip")
+  // — güvenmek hız sınırlayıcıyı sahte bir IP döngüsüyle bypass etmeyi
+  // kolaylaştırırdı. Zincirdeki SON hop, uygulamaya doğrudan bağlanan
+  // (tek) proxy'nin eklediği ve dolayısıyla güvenilir olan girdidir.
   const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) return forwardedFor.split(",")[0]!.trim();
+  if (forwardedFor) {
+    const hops = forwardedFor.split(",").map((h) => h.trim()).filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1]!;
+  }
   return request.headers.get("x-real-ip") ?? "unknown";
 }
 

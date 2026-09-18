@@ -29,7 +29,13 @@ test.describe("Lead Havuzu — sahiplenme (claim_lead RPC)", () => {
     // akışıyla oluşur.
     const externalRef = `e2e-claim-${Date.now()}`;
     const customerName = `E2E Claim Test ${Date.now()}`;
+    // Dokuzuncu tur inceleme: x-forwarded-for göndermeyen istekler
+    // checkRateLimit'in paylaşımlı "unknown" kovasını dolduruyor ve diğer
+    // webhook testleriyle yarışıp birbirini yanlışlıkla 429'a düşürebiliyor
+    // (bkz. webhooks.spec.ts'in aynı deseni).
+    const syntheticIp = `203.0.113.${100 + (Date.now() % 100)}`;
     const setupRes = await request.post("/api/webhooks/google-leads", {
+      headers: { "x-forwarded-for": syntheticIp },
       data: {
         lead_id: externalRef,
         google_key: webhookKey,

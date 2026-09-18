@@ -22,6 +22,14 @@ type GoogleLeadColumn = {
   string_value?: string;
 };
 
+// Dokuzuncu tur inceleme: leads.webhook_raw_payload'a hiçbir üst sınır
+// olmadan yazılıyordu — gerçek bir Google Ads Lead Form payload'ı birkaç
+// KB'tır, bu yüzden 100 KB üzerindeki istekler baştan reddediliyor
+// (Content-Length her zaman güvenilir olmasa da ucuz bir ilk savunma
+// katmanı; global proxyClientMaxBodySize varsayılanı 10 MB'ı sessizce
+// keserek zaten daha büyük bir tavan sağlıyor).
+const MAX_BODY_BYTES = 100_000;
+
 type GoogleLeadWebhookPayload = {
   lead_id?: string;
   google_key?: string;
@@ -58,6 +66,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { message: "Not configured" },
       { status: 500, headers: { "x-correlation-id": logger.correlationId } }
+    );
+  }
+
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (contentLength > MAX_BODY_BYTES) {
+    logger.warn("Payload çok büyük", { contentLength });
+    return NextResponse.json(
+      { message: "Payload too large" },
+      { status: 413, headers: { "x-correlation-id": logger.correlationId } }
     );
   }
 

@@ -6,12 +6,15 @@ import { UsersTable } from "./users-table";
 import { SetHeaderContent } from "@/components/page-header-slot";
 import type { DbRole } from "@/lib/auth/roles";
 
-const ROLE_LABELS: Record<DbRole, string> = {
+// Dokuzuncu tur inceleme: partner_admin/partner_employee bu listede
+// duruyordu ama bu sayfa yalnızca staff hesaplarını (profiles.partner_id
+// olmayan) listeliyor — set_user_role bu iki rolü partner_id'siz bir
+// kullanıcı için her zaman reddediyor. Seçilebilir ama her zaman
+// başarısız olan ölü seçenekler kaldırıldı.
+const ROLE_LABELS: Record<Extract<DbRole, "pv_admin" | "pv_sales" | "first_call">, string> = {
   pv_admin: "Admin",
   pv_sales: "Satış",
   first_call: "First Call",
-  partner_admin: "Partner Yöneticisi",
-  partner_employee: "Partner Çalışanı",
 };
 
 const ROLE_OPTIONS = Object.entries(ROLE_LABELS) as [DbRole, string][];
